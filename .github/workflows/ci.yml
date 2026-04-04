@@ -169,7 +169,7 @@ jobs:
 
       - name: Install build tools (Arch)
         if: matrix.distro == 'arch'
-        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache
+        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache fakeroot debugedit
 
       - name: Build + Package (CPack)
         run: |
