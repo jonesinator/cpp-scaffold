@@ -10,7 +10,7 @@ jobs:
     name: Check (Nix)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixpkgs-unstable
@@ -26,14 +26,93 @@ jobs:
     name: Check (Guix)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: PromyLOPh/guix-install-action@v1
       - run: guix shell --fallback -m manifest.scm -- just check
       - run: guix build -f package.scm
       - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"
 
-  check:
-    name: Check (${{ matrix.distro }})
+  format-check:
+    name: Format check
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install clang-format + just
+        run: apt-get update && apt-get install -y --no-install-recommends clang-format just
+      - name: Run format-check
+        run: just format-check
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install toolchain
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold clang-tidy just
+      - name: Run lint
+        run: just lint
+
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install toolchain
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            doxygen graphviz \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-plain-generic \
+            just make
+      - name: Run docs
+        run: just docs
+      - name: Upload docs
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-docs
+          path: |
+            build/docs/html
+            build/docs/latex/refman.pdf
+
+  deps:
+    name: Deps
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install toolchain
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold graphviz just
+      - name: Run deps
+        run: just deps
+      - name: Upload deps graph
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-deps
+          path: build/deps.svg
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    container: debian:trixie-slim
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install toolchain
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold lcov just
+      - name: Run coverage
+        run: just coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-coverage
+          path: |
+            build/coverage/coverage
+            build/coverage/coverage.info
+
+  test:
+    name: Test (${{ matrix.distro }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -48,58 +127,35 @@ jobs:
             container: archlinux:latest
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install toolchain (Debian)
         if: matrix.distro == 'trixie'
-        run: |
-          apt-get update && apt-get install -y --no-install-recommends \
-            g++ cmake ninja-build ccache mold \
-            clang-format clang-tidy \
-            lcov \
-            doxygen graphviz \
-            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
-            texlive-fonts-recommended texlive-plain-generic \
-            just make
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold ccache just
 
       - name: Install toolchain (Fedora)
         if: matrix.distro == 'fedora'
-        run: |
-          dnf install -y --setopt=install_weak_deps=False \
-            gcc-c++ cmake ninja-build ccache mold \
-            libasan libtsan libubsan \
-            clang-tools-extra \
-            lcov \
-            doxygen graphviz \
-            texlive-collection-latexrecommended texlive-collection-latexextra \
-            texlive-collection-fontsrecommended texlive-collection-plaingeneric texlive-wasysym \
-            just make
+        run: dnf install -y --setopt=install_weak_deps=False gcc-c++ cmake ninja-build mold ccache libasan libtsan libubsan just
 
       - name: Install toolchain (Alpine)
         if: matrix.distro == 'alpine'
-        run: |
-          apk add --no-cache \
-            g++ cmake samurai ccache mold \
-            clang-extra-tools \
-            lcov \
-            doxygen graphviz \
-            texlive texlive-latexrecommended texlive-latexextra texlive-plaingeneric texlive-most \
-            just make gzip perl
+        run: apk add --no-cache g++ cmake samurai mold ccache just
 
       - name: Install toolchain (Arch)
         if: matrix.distro == 'arch'
-        run: |
-          pacman -Syu --noconfirm --needed \
-            gcc cmake ninja ccache mold \
-            clang \
-            lcov \
-            doxygen graphviz \
-            texlive-basic texlive-latexrecommended texlive-latexextra \
-            texlive-fontsrecommended texlive-plaingeneric \
-            just make
+        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache just
 
-      - name: Run full check
-        run: just check
+      - name: Test debug
+        run: just test debug
+
+      - name: Test release
+        run: just test release
+
+      - name: Test asan
+        run: just test asan
+
+      - name: Test tsan
+        run: just test tsan
 
   package:
     name: Package (${{ matrix.distro }}, ${{ matrix.profile }})
@@ -153,7 +209,7 @@ jobs:
             use_makepkg: false
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build tools (Debian)
         if: matrix.distro == 'trixie'
@@ -193,7 +249,7 @@ jobs:
           fi
 
       - name: Upload packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}
           path: /tmp/artifacts/scaffold-*
@@ -246,10 +302,10 @@ jobs:
             pkg_glob: "*.tar.gz"
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ matrix.artifact }}
           path: /tmp/pkg
