@@ -43,7 +43,7 @@ format:
 
 # Check formatting without modifying files
 format-check:
-    find libs bin -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+    find libs bin -name '*.cpp' -o -name '*.hpp' | xargs -n 1 -t clang-format --dry-run --Werror
 
 # Run clang-tidy on the codebase
 lint profile=default_profile: (build profile)
@@ -51,6 +51,7 @@ lint profile=default_profile: (build profile)
 
 # Generate HTML and PDF documentation
 docs:
+    mkdir -p build
     doxygen Doxyfile
     make -C build/docs/latex
     @echo "HTML: build/docs/html/index.html"
@@ -58,6 +59,7 @@ docs:
 
 # Generate HTML documentation only
 docs-html:
+    mkdir -p build
     doxygen Doxyfile
     @echo "HTML: build/docs/html/index.html"
 
