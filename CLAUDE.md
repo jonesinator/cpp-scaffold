@@ -96,6 +96,7 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 - Nix: `packages.default` output in `flake.nix`
 - Guix: `package.scm`
 - Arch: `PKGBUILD` (uses `!lto` to avoid slim LTO objects in static archives)
+- Alpine: `APKBUILD` (built with `abuild`)
 
 ## CI
 

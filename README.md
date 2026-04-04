@@ -57,6 +57,7 @@ The project supports installation via `cmake --install` and packaging for multip
 - **Nix** — `nix build` produces a Nix derivation from [flake.nix](flake.nix)
 - **Guix** — `guix build -f package.scm` produces a Guix package from [package.scm](package.scm)
 - **Arch Linux** — `makepkg` produces a `.pkg.tar.zst` from [PKGBUILD](PKGBUILD)
+- **Alpine Linux** — `abuild` produces a `.apk` from [APKBUILD](APKBUILD)
 
 ### Reproducible Builds
 
@@ -150,6 +151,7 @@ Libraries expose public headers via `include/<name>/` and use CMake-generated ex
 | [manifest.scm](manifest.scm) | Guix development environment |
 | [package.scm](package.scm) | Guix package definition |
 | [PKGBUILD](PKGBUILD) | Arch Linux package definition |
+| [APKBUILD](APKBUILD) | Alpine Linux package definition |
 | [Doxyfile](Doxyfile) | Doxygen documentation configuration |
 | [.clang-format](.clang-format) | Code formatting rules (120 columns, Allman braces) |
 | [.clang-tidy](.clang-tidy) | Static analysis checks and naming conventions |

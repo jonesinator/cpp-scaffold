@@ -1,0 +1,15 @@
+name: Guix
+
+on:
+  workflow_dispatch:
+
+jobs:
+  guix:
+    name: Check (Guix)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PromyLOPh/guix-install-action@v1
+      - run: guix shell --fallback -m manifest.scm -- just check
+      - run: guix build -f package.scm
+      - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"

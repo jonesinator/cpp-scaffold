@@ -23,18 +23,6 @@ jobs:
       - run: nix build
       - run: ./result/bin/csv2json | grep -q csv
 
-  guix:
-    name: Check (Guix)
-    runs-on: ubuntu-latest
-    # Guix toolchain bootstrap is very slow; only run on manual trigger
-    if: github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v6
-      - uses: PromyLOPh/guix-install-action@v1
-      - run: guix shell --fallback -m manifest.scm -- just check
-      - run: guix build -f package.scm
-      - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"
-
   format-check:
     name: Format check
     runs-on: ubuntu-latest
@@ -172,44 +160,52 @@ jobs:
             profile: release
             generators: "TGZ;DEB"
             use_makepkg: false
+            use_abuild: false
           - distro: trixie
             container: debian:trixie-slim
             profile: debug
             generators: "TGZ;DEB"
             use_makepkg: false
+            use_abuild: false
           # Fedora — TGZ + RPM
           - distro: fedora
             container: fedora:latest
             profile: release
             generators: "TGZ;RPM"
             use_makepkg: false
+            use_abuild: false
           - distro: fedora
             container: fedora:latest
             profile: debug
             generators: "TGZ;RPM"
             use_makepkg: false
-          # Alpine — TGZ only
+            use_abuild: false
+          # Alpine — TGZ + APK (both profiles, via abuild)
           - distro: alpine
             container: alpine:edge
             profile: release
             generators: "TGZ"
             use_makepkg: false
+            use_abuild: true
           - distro: alpine
             container: alpine:edge
             profile: debug
             generators: "TGZ"
             use_makepkg: false
-          # Arch — makepkg + TGZ for release, TGZ only for debug
+            use_abuild: true
+          # Arch — TGZ + pkg.tar.zst (both profiles, via makepkg)
           - distro: arch
             container: archlinux:latest
             profile: release
             generators: "TGZ"
             use_makepkg: true
+            use_abuild: false
           - distro: arch
             container: archlinux:latest
             profile: debug
             generators: "TGZ"
-            use_makepkg: false
+            use_makepkg: true
+            use_abuild: false
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v6
@@ -224,11 +220,15 @@ jobs:
 
       - name: Install build tools (Alpine)
         if: matrix.distro == 'alpine'
-        run: apk add --no-cache g++ cmake samurai mold ccache
+        run: |
+          apk add --no-cache g++ cmake samurai mold ccache
+          if [ "${{ matrix.use_abuild }}" = "true" ]; then
+            apk add --no-cache alpine-sdk sudo
+          fi
 
       - name: Install build tools (Arch)
         if: matrix.distro == 'arch'
-        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache fakeroot debugedit
+        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache fakeroot
 
       - name: Build + Package (CPack)
         run: |
@@ -241,7 +241,21 @@ jobs:
         run: |
           useradd -m builder
           chown -R builder:builder .
-          su builder -c "makepkg -f"
+          su builder -c "SCAFFOLD_PROFILE=${{ matrix.profile }} makepkg -f"
+
+      - name: Build + Package (abuild)
+        if: matrix.use_abuild == true
+        run: |
+          adduser -D builder
+          addgroup builder abuild
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+          su builder -c "
+            abuild-keygen -a -n &&
+            sudo cp /home/builder/.abuild/*.rsa.pub /etc/apk/keys/ &&
+            SCAFFOLD_PROFILE=${{ matrix.profile }} abuild -F
+          "
+          find /home/builder/packages -name "scaffold*.apk" -exec cp {} . \;
 
       - name: Upload TGZ
         uses: actions/upload-artifact@v7
@@ -268,7 +282,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-pkg
-          path: scaffold-[0-9]*.pkg.tar.zst
+          path: scaffold*.pkg.tar.zst
+
+      - name: Upload APK
+        if: matrix.use_abuild == true
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-apk
+          path: scaffold-*.apk
 
   install-test:
     name: Install Test (${{ matrix.distro }}, ${{ matrix.format }})
@@ -295,7 +316,11 @@ jobs:
             container: fedora:latest
             format: tgz
             pkg_glob: "*.tar.gz"
-          # Alpine — TGZ
+          # Alpine — APK + TGZ
+          - distro: alpine
+            container: alpine:edge
+            format: apk
+            pkg_glob: "*.apk"
           - distro: alpine
             container: alpine:edge
             format: tgz
@@ -331,13 +356,17 @@ jobs:
         if: matrix.format == 'pkg'
         run: pacman -U --noconfirm /tmp/pkg/${{ matrix.pkg_glob }}
 
+      - name: Install package (APK)
+        if: matrix.format == 'apk'
+        run: apk add --no-cache --allow-untrusted /tmp/pkg/${{ matrix.pkg_glob }}
+
       - name: Install package (TGZ)
         if: matrix.format == 'tgz'
         run: |
           tar xzf /tmp/pkg/${{ matrix.pkg_glob }} -C /usr --strip-components=1
 
-      - name: Install runtime deps (Alpine)
-        if: matrix.distro == 'alpine'
+      - name: Install runtime deps (Alpine TGZ only)
+        if: matrix.distro == 'alpine' && matrix.format == 'tgz'
         run: apk add --no-cache libstdc++
 
       - name: Test binary

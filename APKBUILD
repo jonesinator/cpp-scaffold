@@ -1,4 +1,4 @@
-# Maintainer: scaffold-dev@example.com
+# Maintainer: Scaffold Dev <scaffold-dev@example.com>
 _profile="${SCAFFOLD_PROFILE:-release}"
 pkgname=scaffold
 _pkgdesc_suffix=""
@@ -7,15 +7,16 @@ if [ "$_profile" = "debug" ]; then
     _pkgdesc_suffix=" (debug build)"
 fi
 pkgver=0.1.0
-pkgrel=1
+pkgrel=0
 pkgdesc="A modern C++26 project scaffold${_pkgdesc_suffix}"
-arch=('x86_64')
 url="https://example.com/scaffold"
-license=('MIT')
-depends=('gcc-libs')
-makedepends=('cmake' 'ninja' 'mold' 'gcc')
-options=('staticlibs' '!lto' '!strip' '!debug')
-source=()
+arch="x86_64"
+license="MIT"
+depends="libstdc++"
+makedepends="cmake samurai mold"
+source=""
+builddir="$startdir"
+options="!strip"
 
 build() {
     cd "$startdir"
