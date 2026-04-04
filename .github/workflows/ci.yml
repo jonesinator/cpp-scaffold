@@ -181,7 +181,7 @@ jobs:
 
       - name: Install build tools (Fedora)
         if: matrix.distro == 'fedora'
-        run: dnf install -y --setopt=install_weak_deps=False gcc-c++ cmake ninja-build mold ccache rpm-build
+        run: dnf install -y --setopt=install_weak_deps=False gcc-c++ cmake ninja-build mold ccache rpm-build libasan libtsan libubsan
 
       - name: Install build tools (Alpine)
         if: matrix.distro == 'alpine'
