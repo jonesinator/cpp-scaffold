@@ -5,6 +5,7 @@ target_link_libraries(json2csv PRIVATE csv json)
 install(
     TARGETS   json2csv
     RUNTIME   DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT json2csv_bin
 )
 
 # ---------- Tests ----------

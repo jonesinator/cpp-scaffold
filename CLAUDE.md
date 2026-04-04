@@ -89,7 +89,9 @@ guix build -f package.scm   # build Guix package
 makepkg                     # build Arch Linux .pkg.tar.zst
 ```
 
-All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, `json2csv`) have CMake install rules. Downstream consumers can use `find_package(scaffold REQUIRED COMPONENTS core csv json convert)` and link against any of `scaffold::core`, `scaffold::csv`, `scaffold::json`, or `scaffold::convert`. The install tree includes headers, static libraries, binaries, and CMake package config files.
+All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, `json2csv`) have CMake install rules. Each library builds as **both shared and static** (`libscaffold-<name>.so.0.1.0` + `libscaffold-<name>.a`). Downstream consumers can `find_package(scaffold REQUIRED COMPONENTS core csv json convert)` and link against `scaffold::<name>` (shared) or `scaffold::<name>_static`.
+
+**Per-component packaging:** All distributions (DEB, RPM, APK, pkg.tar.zst) are split into per-component packages following Debian convention: `libscaffold-<lib>` (runtime), `libscaffold-<lib>-dev` (headers + static + symlink), plus `scaffold-csv2json`/`scaffold-json2csv` (binaries) and `libscaffold-dev` (umbrella dev package with CMake config). Each profile produces 11 packages per distro.
 
 **Package definitions:**
 - CPack (TGZ/DEB/RPM): configured in `cmake/Packaging.cmake`

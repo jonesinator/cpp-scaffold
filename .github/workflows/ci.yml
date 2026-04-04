@@ -311,7 +311,9 @@ jobs:
 
       - name: Install package (DEB)
         if: matrix.format == 'deb'
-        run: dpkg -i /tmp/pkg/${{ matrix.pkg_glob }}
+        run: |
+          apt-get update -qq
+          apt-get install -y /tmp/pkg/${{ matrix.pkg_glob }}
 
       - name: Install package (RPM)
         if: matrix.format == 'rpm'

@@ -29,28 +29,98 @@ set(CPACK_PACKAGE_FILE_NAME
 # ---------- Generators ----------
 set(CPACK_GENERATOR "TGZ;DEB;RPM")
 
-# ---------- Runtime deps (vary by sanitizer profile) ----------
-set(_deb_deps "libc6 (>= 2.34), libstdc++6 (>= 14)")
-set(_rpm_deps "glibc >= 2.34, libstdc++ >= 14")
+# ---------- Per-component packaging (DEB + RPM) ----------
+set(CPACK_DEB_COMPONENT_INSTALL ON)
+set(CPACK_RPM_COMPONENT_INSTALL ON)
+set(CPACK_COMPONENTS_GROUPING IGNORE)
+# TGZ stays monolithic (contains all components).
+
+# Shared system runtime deps, appended to per-package deps below.
+set(_deb_sys_deps "libc6 (>= 2.34), libstdc++6 (>= 14)")
+set(_rpm_sys_deps "glibc >= 2.34, libstdc++ >= 14")
 if(ENABLE_ASAN)
-    # ASan+UBSan binaries need libasan + libubsan at runtime
-    string(APPEND _deb_deps ", libasan8, libubsan1")
-    string(APPEND _rpm_deps ", libasan, libubsan")
+    string(APPEND _deb_sys_deps ", libasan8, libubsan1")
+    string(APPEND _rpm_sys_deps ", libasan, libubsan")
 elseif(ENABLE_TSAN)
-    # TSan binaries need libtsan at runtime
-    string(APPEND _deb_deps ", libtsan2")
-    string(APPEND _rpm_deps ", libtsan")
+    string(APPEND _deb_sys_deps ", libtsan2")
+    string(APPEND _rpm_sys_deps ", libtsan")
 endif()
 
-# ---------- DEB ----------
+# Debian naming: SOVERSION (=0) is baked into runtime package name
+set(_soversion 0)
+
+# ---------- DEB package metadata ----------
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_deb_deps}")
 
-# ---------- RPM ----------
+# Per-component DEB package names and dependencies.
+# Runtime library packages (libscaffold-<name>0)
+foreach(_lib core csv json convert)
+    string(TOUPPER "${_lib}_LIB" _comp)
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_NAME "libscaffold-${_lib}${_soversion}")
+endforeach()
+set(CPACK_DEBIAN_CORE_LIB_PACKAGE_DEPENDS "${_deb_sys_deps}")
+set(CPACK_DEBIAN_CSV_LIB_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+set(CPACK_DEBIAN_JSON_LIB_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+set(CPACK_DEBIAN_CONVERT_LIB_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-json${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+
+# Development packages (libscaffold-<name>-dev)
+foreach(_lib core csv json convert)
+    string(TOUPPER "${_lib}_DEV" _comp)
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_NAME "libscaffold-${_lib}-dev")
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_SECTION "libdevel")
+endforeach()
+set(CPACK_DEBIAN_CORE_DEV_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION})")
+set(CPACK_DEBIAN_CSV_DEV_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-core-dev (= ${PROJECT_VERSION})")
+set(CPACK_DEBIAN_JSON_DEV_PACKAGE_DEPENDS "libscaffold-json${_soversion} (= ${PROJECT_VERSION}), libscaffold-core-dev (= ${PROJECT_VERSION})")
+set(CPACK_DEBIAN_CONVERT_DEV_PACKAGE_DEPENDS "libscaffold-convert${_soversion} (= ${PROJECT_VERSION}), libscaffold-csv-dev (= ${PROJECT_VERSION}), libscaffold-json-dev (= ${PROJECT_VERSION})")
+
+# CMake config umbrella package (libscaffold-dev)
+set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_NAME "libscaffold-dev")
+set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_SECTION "libdevel")
+set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_DEPENDS
+    "libscaffold-core-dev (= ${PROJECT_VERSION}), libscaffold-csv-dev (= ${PROJECT_VERSION}), libscaffold-json-dev (= ${PROJECT_VERSION}), libscaffold-convert-dev (= ${PROJECT_VERSION})")
+
+# Binary packages
+set(CPACK_DEBIAN_CSV2JSON_BIN_PACKAGE_NAME "scaffold-csv2json")
+set(CPACK_DEBIAN_CSV2JSON_BIN_PACKAGE_DEPENDS "libscaffold-convert${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_NAME "scaffold-json2csv")
+set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-json${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+
+# ---------- RPM package metadata ----------
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries")
-set(CPACK_RPM_PACKAGE_REQUIRES "${_rpm_deps}")
+
+# Runtime library packages
+foreach(_lib core csv json convert)
+    string(TOUPPER "${_lib}_LIB" _comp)
+    set(CPACK_RPM_${_comp}_PACKAGE_NAME "libscaffold-${_lib}")
+endforeach()
+set(CPACK_RPM_CORE_LIB_PACKAGE_REQUIRES "${_rpm_sys_deps}")
+set(CPACK_RPM_CSV_LIB_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
+set(CPACK_RPM_JSON_LIB_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
+set(CPACK_RPM_CONVERT_LIB_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-json = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
+
+# Development packages
+foreach(_lib core csv json convert)
+    string(TOUPPER "${_lib}_DEV" _comp)
+    set(CPACK_RPM_${_comp}_PACKAGE_NAME "libscaffold-${_lib}-devel")
+endforeach()
+set(CPACK_RPM_CORE_DEV_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}")
+set(CPACK_RPM_CSV_DEV_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-core-devel = ${PROJECT_VERSION}")
+set(CPACK_RPM_JSON_DEV_PACKAGE_REQUIRES "libscaffold-json = ${PROJECT_VERSION}, libscaffold-core-devel = ${PROJECT_VERSION}")
+set(CPACK_RPM_CONVERT_DEV_PACKAGE_REQUIRES "libscaffold-convert = ${PROJECT_VERSION}, libscaffold-csv-devel = ${PROJECT_VERSION}, libscaffold-json-devel = ${PROJECT_VERSION}")
+
+# CMake config umbrella package
+set(CPACK_RPM_CMAKE_CONFIG_PACKAGE_NAME "libscaffold-devel")
+set(CPACK_RPM_CMAKE_CONFIG_PACKAGE_REQUIRES
+    "libscaffold-core-devel = ${PROJECT_VERSION}, libscaffold-csv-devel = ${PROJECT_VERSION}, libscaffold-json-devel = ${PROJECT_VERSION}, libscaffold-convert-devel = ${PROJECT_VERSION}")
+
+# Binary packages
+set(CPACK_RPM_CSV2JSON_BIN_PACKAGE_NAME "scaffold-csv2json")
+set(CPACK_RPM_CSV2JSON_BIN_PACKAGE_REQUIRES "libscaffold-convert = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
+set(CPACK_RPM_JSON2CSV_BIN_PACKAGE_NAME "scaffold-json2csv")
+set(CPACK_RPM_JSON2CSV_BIN_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-json = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
 
 # ---------- Source package ----------
 set(CPACK_SOURCE_GENERATOR "TGZ")

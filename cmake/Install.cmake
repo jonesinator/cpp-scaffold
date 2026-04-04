@@ -1,9 +1,10 @@
 include(CMakePackageConfigHelpers)
 
-# ---------- Version header ----------
+# ---------- Version header (part of cmake_config component) ----------
 install(
     FILES       ${CMAKE_BINARY_DIR}/generated/scaffold/version.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/scaffold
+    COMPONENT   cmake_config
 )
 
 # ---------- Package version file ----------
@@ -25,6 +26,7 @@ install(
     EXPORT      scaffoldTargets
     NAMESPACE   scaffold::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scaffold
+    COMPONENT   cmake_config
 )
 
 # ---------- Config files ----------
@@ -33,4 +35,5 @@ install(
         ${CMAKE_CURRENT_BINARY_DIR}/scaffold-config.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/scaffold-config-version.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scaffold
+    COMPONENT   cmake_config
 )

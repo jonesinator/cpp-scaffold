@@ -5,6 +5,7 @@ target_link_libraries(csv2json PRIVATE convert)
 install(
     TARGETS   csv2json
     RUNTIME   DESTINATION ${CMAKE_INSTALL_BINDIR}
+    COMPONENT csv2json_bin
 )
 
 # ---------- Tests ----------

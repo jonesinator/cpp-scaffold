@@ -50,14 +50,26 @@ The example code (libraries `core`, `csv`, `json`, `convert` and binaries `csv2j
 
 ### Packaging
 
-The project supports installation via `cmake --install` and packaging for multiple distributions:
+The project supports installation via `cmake --install` and packaging for multiple distributions with **per-component Debian-style splits**. Each library ships as both a runtime shared library (`.so`) and a static archive (`.a`) — consumers pick their preferred link type.
 
-- **CMake install targets** with `find_package(scaffold COMPONENTS core)` support for downstream consumers
-- **CPack** generates TGZ, DEB (Debian), and RPM (Fedora) packages
+**Per-component package structure:**
+
+| Package | Contents |
+|---|---|
+| `libscaffold-<lib>` (runtime) | `libscaffold-<lib>.so.0` shared library |
+| `libscaffold-<lib>-dev` | `libscaffold-<lib>.so` symlink + `libscaffold-<lib>.a` + headers |
+| `libscaffold-dev` | Umbrella dev package with CMake config (`find_package(scaffold)`) |
+| `scaffold-csv2json`, `scaffold-json2csv` | Binaries, depend on the runtime libs |
+
+Each profile produces 11 packages per distro. Packaging formats:
+
+- **CPack** generates per-component DEB, RPM packages + monolithic TGZ
+- **`abuild`** splits `APKBUILD` into subpackages (`.apk`)
+- **`makepkg`** uses `PKGBUILD` split-packages array (`.pkg.tar.zst`)
 - **Nix** — `nix build` produces a Nix derivation from [flake.nix](flake.nix)
 - **Guix** — `guix build -f package.scm` produces a Guix package from [package.scm](package.scm)
-- **Arch Linux** — `makepkg` produces a `.pkg.tar.zst` from [PKGBUILD](PKGBUILD)
-- **Alpine Linux** — `abuild` produces a `.apk` from [APKBUILD](APKBUILD)
+
+`find_package(scaffold COMPONENTS core csv json convert)` links against `scaffold::<name>` (shared) or `scaffold::<name>_static`.
 
 ### Reproducible Builds
 

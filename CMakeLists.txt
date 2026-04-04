@@ -51,11 +51,11 @@ option(ENABLE_TSAN "Build with ThreadSanitizer" OFF)
 include(cmake/Sanitizers.cmake)
 
 # ---------- Shared library support ----------
-option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
+# We always build both shared and static variants of each library (see
+# libs/*/CMakeLists.txt). Visibility hiding is needed for proper shared library
+# symbol management via generate_export_header.
 include(GenerateExportHeader)
-if(BUILD_SHARED_LIBS)
-    add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
-endif()
+add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
 
 # ---------- Version header ----------
 include(cmake/Version.cmake)
