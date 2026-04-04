@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   nix:
@@ -25,6 +26,8 @@ jobs:
   guix:
     name: Check (Guix)
     runs-on: ubuntu-latest
+    # Guix toolchain bootstrap is very slow; only run on manual trigger
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v6
       - uses: PromyLOPh/guix-install-action@v1
@@ -240,19 +243,32 @@ jobs:
           chown -R builder:builder .
           su builder -c "makepkg -f"
 
-      - name: Collect artifacts
-        run: |
-          mkdir -p /tmp/artifacts
-          cp build/${{ matrix.profile }}/scaffold-* /tmp/artifacts/ 2>/dev/null || true
-          if [ "${{ matrix.use_makepkg }}" = "true" ]; then
-            cp scaffold-[0-9]*.pkg.tar.zst /tmp/artifacts/ 2>/dev/null || true
-          fi
-
-      - name: Upload packages
+      - name: Upload TGZ
         uses: actions/upload-artifact@v7
         with:
-          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}
-          path: /tmp/artifacts/scaffold-*
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-tgz
+          path: build/${{ matrix.profile }}/scaffold-*.tar.gz
+
+      - name: Upload DEB
+        if: matrix.distro == 'trixie'
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-deb
+          path: build/${{ matrix.profile }}/scaffold-*.deb
+
+      - name: Upload RPM
+        if: matrix.distro == 'fedora'
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-rpm
+          path: build/${{ matrix.profile }}/scaffold-*.rpm
+
+      - name: Upload pkg.tar.zst
+        if: matrix.use_makepkg == true
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-pkg
+          path: scaffold-[0-9]*.pkg.tar.zst
 
   install-test:
     name: Install Test (${{ matrix.distro }}, ${{ matrix.format }})
@@ -265,40 +281,33 @@ jobs:
           - distro: trixie
             container: debian:trixie-slim
             format: deb
-            artifact: scaffold-trixie-release
             pkg_glob: "*.deb"
           - distro: trixie
             container: debian:trixie-slim
             format: tgz
-            artifact: scaffold-trixie-release
             pkg_glob: "*.tar.gz"
           # Fedora — RPM + TGZ
           - distro: fedora
             container: fedora:latest
             format: rpm
-            artifact: scaffold-fedora-release
             pkg_glob: "*.rpm"
           - distro: fedora
             container: fedora:latest
             format: tgz
-            artifact: scaffold-fedora-release
             pkg_glob: "*.tar.gz"
           # Alpine — TGZ
           - distro: alpine
             container: alpine:edge
             format: tgz
-            artifact: scaffold-alpine-release
             pkg_glob: "*.tar.gz"
           # Arch — pkg.tar.zst + TGZ
           - distro: arch
             container: archlinux:latest
             format: pkg
-            artifact: scaffold-arch-release
             pkg_glob: "*.pkg.tar.zst"
           - distro: arch
             container: archlinux:latest
             format: tgz
-            artifact: scaffold-arch-release
             pkg_glob: "*.tar.gz"
     container: ${{ matrix.container }}
     steps:
@@ -307,7 +316,7 @@ jobs:
       - name: Download package
         uses: actions/download-artifact@v8
         with:
-          name: ${{ matrix.artifact }}
+          name: scaffold-${{ matrix.distro }}-release-${{ matrix.format }}
           path: /tmp/pkg
 
       - name: Install package (DEB)
