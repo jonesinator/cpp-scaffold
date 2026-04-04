@@ -220,7 +220,7 @@ jobs:
             sudo cp /home/builder/.abuild/*.rsa.pub /etc/apk/keys/ &&
             SCAFFOLD_PROFILE=${{ matrix.profile }} abuild -F
           "
-          find /home/builder/packages -name "scaffold*.apk" -exec cp {} . \;
+          find /home/builder/packages -name "*.apk" -exec cp {} . \;
 
       - name: Upload TGZ
         uses: actions/upload-artifact@v7
@@ -247,14 +247,14 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-pkg
-          path: scaffold*.pkg.tar.zst
+          path: "*.pkg.tar.zst"
 
       - name: Upload APK
         if: matrix.use_abuild == true
         uses: actions/upload-artifact@v7
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-apk
-          path: scaffold-*.apk
+          path: "*.apk"
 
   install-test:
     name: Install Test (${{ matrix.distro }}, ${{ matrix.format }})
