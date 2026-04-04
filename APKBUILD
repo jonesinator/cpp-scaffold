@@ -13,6 +13,8 @@ url="https://example.com/scaffold"
 arch="x86_64"
 license="MIT"
 depends="libstdc++"
+# Sanitizer runtime libs (libasan.so.8, libubsan.so.1, libtsan.so.2) are auto-detected
+# by abuild as "so:" dependencies and resolve to Alpine's `gcc` package.
 makedepends="cmake samurai mold"
 source=""
 builddir="$startdir"

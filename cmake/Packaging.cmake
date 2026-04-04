@@ -29,15 +29,28 @@ set(CPACK_PACKAGE_FILE_NAME
 # ---------- Generators ----------
 set(CPACK_GENERATOR "TGZ;DEB;RPM")
 
+# ---------- Runtime deps (vary by sanitizer profile) ----------
+set(_deb_deps "libc6 (>= 2.34), libstdc++6 (>= 14)")
+set(_rpm_deps "glibc >= 2.34, libstdc++ >= 14")
+if(ENABLE_ASAN)
+    # ASan+UBSan binaries need libasan + libubsan at runtime
+    string(APPEND _deb_deps ", libasan8, libubsan1")
+    string(APPEND _rpm_deps ", libasan, libubsan")
+elseif(ENABLE_TSAN)
+    # TSan binaries need libtsan at runtime
+    string(APPEND _deb_deps ", libtsan2")
+    string(APPEND _rpm_deps ", libtsan")
+endif()
+
 # ---------- DEB ----------
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.34), libstdc++6 (>= 14)")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "${_deb_deps}")
 
 # ---------- RPM ----------
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries")
-set(CPACK_RPM_PACKAGE_REQUIRES "glibc >= 2.34, libstdc++ >= 14")
+set(CPACK_RPM_PACKAGE_REQUIRES "${_rpm_deps}")
 
 # ---------- Source package ----------
 set(CPACK_SOURCE_GENERATOR "TGZ")
