@@ -12,9 +12,19 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 endif()
 
-string(TOLOWER "${CMAKE_BUILD_TYPE}" _build_type)
+# Profile name for package filename — the asan/tsan/coverage presets all use
+# CMAKE_BUILD_TYPE=Debug, so we derive the suffix from the enabled flags instead.
+if(ENABLE_ASAN)
+    set(_profile_suffix "asan")
+elseif(ENABLE_TSAN)
+    set(_profile_suffix "tsan")
+elseif(ENABLE_COVERAGE)
+    set(_profile_suffix "coverage")
+else()
+    string(TOLOWER "${CMAKE_BUILD_TYPE}" _profile_suffix)
+endif()
 set(CPACK_PACKAGE_FILE_NAME
-    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${_build_type}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+    "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${_profile_suffix}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
 
 # ---------- Generators ----------
 set(CPACK_GENERATOR "TGZ;DEB;RPM")

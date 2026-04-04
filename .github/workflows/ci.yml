@@ -103,10 +103,13 @@ jobs:
             build/coverage/coverage.info
 
   test:
-    name: Test (${{ matrix.distro }})
+    name: Test (${{ matrix.distro }}, ${{ matrix.profile }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        distro: [trixie, fedora, alpine, arch]
+        profile: [debug, release, asan, tsan]
         include:
           - distro: trixie
             container: debian:trixie-slim
@@ -136,73 +139,35 @@ jobs:
         if: matrix.distro == 'arch'
         run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache just
 
-      - name: Test debug
-        run: just test debug
-
-      - name: Test release
-        run: just test release
-
-      - name: Test asan
-        run: just test asan
-
-      - name: Test tsan
-        run: just test tsan
+      - name: Test
+        run: just test ${{ matrix.profile }}
 
   package:
     name: Package (${{ matrix.distro }}, ${{ matrix.profile }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        distro: [trixie, fedora, alpine, arch]
+        profile: [release, debug, asan, tsan]
         include:
-          # Debian — TGZ + DEB
           - distro: trixie
             container: debian:trixie-slim
-            profile: release
             generators: "TGZ;DEB"
-            use_makepkg: false
-            use_abuild: false
-          - distro: trixie
-            container: debian:trixie-slim
-            profile: debug
-            generators: "TGZ;DEB"
-            use_makepkg: false
-            use_abuild: false
-          # Fedora — TGZ + RPM
-          - distro: fedora
-            container: fedora:latest
-            profile: release
-            generators: "TGZ;RPM"
             use_makepkg: false
             use_abuild: false
           - distro: fedora
             container: fedora:latest
-            profile: debug
             generators: "TGZ;RPM"
             use_makepkg: false
             use_abuild: false
-          # Alpine — TGZ + APK (both profiles, via abuild)
           - distro: alpine
             container: alpine:edge
-            profile: release
             generators: "TGZ"
             use_makepkg: false
             use_abuild: true
-          - distro: alpine
-            container: alpine:edge
-            profile: debug
-            generators: "TGZ"
-            use_makepkg: false
-            use_abuild: true
-          # Arch — TGZ + pkg.tar.zst (both profiles, via makepkg)
           - distro: arch
             container: archlinux:latest
-            profile: release
-            generators: "TGZ"
-            use_makepkg: true
-            use_abuild: false
-          - distro: arch
-            container: archlinux:latest
-            profile: debug
             generators: "TGZ"
             use_makepkg: true
             use_abuild: false

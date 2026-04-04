@@ -2,9 +2,9 @@
 _profile="${SCAFFOLD_PROFILE:-release}"
 pkgname=scaffold
 _pkgdesc_suffix=""
-if [ "$_profile" = "debug" ]; then
-    pkgname=scaffold-debug
-    _pkgdesc_suffix=" (debug build)"
+if [ "$_profile" != "release" ]; then
+    pkgname="scaffold-${_profile}"
+    _pkgdesc_suffix=" (${_profile} build)"
 fi
 pkgver=0.1.0
 pkgrel=1
