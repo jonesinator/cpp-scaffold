@@ -1,0 +1,21 @@
+{
+    "name": "scaffold",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "llvm-vs-code-extensions.vscode-clangd",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools"
+            ],
+            "settings": {
+                "cmake.generator": "Ninja",
+                "clangd.path": "/usr/bin/clangd",
+                "clangd.arguments": ["--compile-commands-dir=build/debug"]
+            }
+        }
+    },
+    "postCreateCommand": "just configure"
+}

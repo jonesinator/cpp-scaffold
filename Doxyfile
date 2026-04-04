@@ -1,0 +1,40 @@
+# Doxyfile for the scaffold project
+
+PROJECT_NAME           = "scaffold"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "scaffold project"
+OUTPUT_DIRECTORY       = build/docs
+CREATE_SUBDIRS         = NO
+
+INPUT                  = libs
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp *.cpp
+EXCLUDE_PATTERNS       = */tests/*
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+
+GENERATE_LATEX         = YES
+LATEX_OUTPUT           = latex
+PDF_HYPERLINKS         = YES
+USE_PDFLATEX           = YES
+
+GENERATE_XML           = NO
+GENERATE_MAN           = NO
+
+HAVE_DOT               = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+DIRECTORY_GRAPH        = YES
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_AS_ERROR          = YES

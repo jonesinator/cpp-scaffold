@@ -1,0 +1,306 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  nix:
+    name: Check (Nix)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixpkgs-unstable
+      - uses: cachix/cachix-action@v16
+        with:
+          name: scaffold
+        continue-on-error: true
+      - run: nix develop --command just check
+      - run: nix build
+      - run: ./result/bin/csv2json | grep -q csv
+
+  guix:
+    name: Check (Guix)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PromyLOPh/guix-install-action@v1
+      - run: guix shell --fallback -m manifest.scm -- just check
+      - run: guix build -f package.scm
+      - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"
+
+  check:
+    name: Check (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - distro: trixie
+            container: debian:trixie-slim
+          - distro: fedora
+            container: fedora:latest
+          - distro: alpine
+            container: alpine:edge
+          - distro: arch
+            container: archlinux:latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install toolchain (Debian)
+        if: matrix.distro == 'trixie'
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            g++ cmake ninja-build ccache mold \
+            clang-format clang-tidy \
+            lcov \
+            doxygen graphviz \
+            texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+            texlive-fonts-recommended texlive-plain-generic \
+            just make
+
+      - name: Install toolchain (Fedora)
+        if: matrix.distro == 'fedora'
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            gcc-c++ cmake ninja-build ccache mold \
+            libasan libtsan libubsan \
+            clang-tools-extra \
+            lcov \
+            doxygen graphviz \
+            texlive-collection-latexrecommended texlive-collection-latexextra \
+            texlive-collection-fontsrecommended texlive-collection-plaingeneric texlive-wasysym \
+            just make
+
+      - name: Install toolchain (Alpine)
+        if: matrix.distro == 'alpine'
+        run: |
+          apk add --no-cache \
+            g++ cmake samurai ccache mold \
+            clang-extra-tools \
+            lcov \
+            doxygen graphviz \
+            texlive texlive-latexrecommended texlive-latexextra texlive-plaingeneric texlive-most \
+            just make gzip perl
+
+      - name: Install toolchain (Arch)
+        if: matrix.distro == 'arch'
+        run: |
+          pacman -Syu --noconfirm --needed \
+            gcc cmake ninja ccache mold \
+            clang \
+            lcov \
+            doxygen graphviz \
+            texlive-basic texlive-latexrecommended texlive-latexextra \
+            texlive-fontsrecommended texlive-plaingeneric \
+            just make
+
+      - name: Run full check
+        run: just check
+
+  package:
+    name: Package (${{ matrix.distro }}, ${{ matrix.profile }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Debian — TGZ + DEB
+          - distro: trixie
+            container: debian:trixie-slim
+            profile: release
+            generators: "TGZ;DEB"
+            use_makepkg: false
+          - distro: trixie
+            container: debian:trixie-slim
+            profile: debug
+            generators: "TGZ;DEB"
+            use_makepkg: false
+          # Fedora — TGZ + RPM
+          - distro: fedora
+            container: fedora:latest
+            profile: release
+            generators: "TGZ;RPM"
+            use_makepkg: false
+          - distro: fedora
+            container: fedora:latest
+            profile: debug
+            generators: "TGZ;RPM"
+            use_makepkg: false
+          # Alpine — TGZ only
+          - distro: alpine
+            container: alpine:edge
+            profile: release
+            generators: "TGZ"
+            use_makepkg: false
+          - distro: alpine
+            container: alpine:edge
+            profile: debug
+            generators: "TGZ"
+            use_makepkg: false
+          # Arch — makepkg + TGZ for release, TGZ only for debug
+          - distro: arch
+            container: archlinux:latest
+            profile: release
+            generators: "TGZ"
+            use_makepkg: true
+          - distro: arch
+            container: archlinux:latest
+            profile: debug
+            generators: "TGZ"
+            use_makepkg: false
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools (Debian)
+        if: matrix.distro == 'trixie'
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold ccache
+
+      - name: Install build tools (Fedora)
+        if: matrix.distro == 'fedora'
+        run: dnf install -y --setopt=install_weak_deps=False gcc-c++ cmake ninja-build mold ccache rpm-build
+
+      - name: Install build tools (Alpine)
+        if: matrix.distro == 'alpine'
+        run: apk add --no-cache g++ cmake samurai mold ccache
+
+      - name: Install build tools (Arch)
+        if: matrix.distro == 'arch'
+        run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache
+
+      - name: Build + Package (CPack)
+        run: |
+          cmake --preset ${{ matrix.profile }}
+          cmake --build --preset ${{ matrix.profile }}
+          cd build/${{ matrix.profile }} && cpack -G "${{ matrix.generators }}"
+
+      - name: Build + Package (makepkg)
+        if: matrix.use_makepkg == true
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          su builder -c "makepkg -f"
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p /tmp/artifacts
+          cp build/${{ matrix.profile }}/scaffold-* /tmp/artifacts/ 2>/dev/null || true
+          if [ "${{ matrix.use_makepkg }}" = "true" ]; then
+            cp scaffold-[0-9]*.pkg.tar.zst /tmp/artifacts/ 2>/dev/null || true
+          fi
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}
+          path: /tmp/artifacts/scaffold-*
+
+  install-test:
+    name: Install Test (${{ matrix.distro }}, ${{ matrix.format }})
+    needs: package
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Debian — DEB + TGZ
+          - distro: trixie
+            container: debian:trixie-slim
+            format: deb
+            artifact: scaffold-trixie-release
+            pkg_glob: "*.deb"
+          - distro: trixie
+            container: debian:trixie-slim
+            format: tgz
+            artifact: scaffold-trixie-release
+            pkg_glob: "*.tar.gz"
+          # Fedora — RPM + TGZ
+          - distro: fedora
+            container: fedora:latest
+            format: rpm
+            artifact: scaffold-fedora-release
+            pkg_glob: "*.rpm"
+          - distro: fedora
+            container: fedora:latest
+            format: tgz
+            artifact: scaffold-fedora-release
+            pkg_glob: "*.tar.gz"
+          # Alpine — TGZ
+          - distro: alpine
+            container: alpine:edge
+            format: tgz
+            artifact: scaffold-alpine-release
+            pkg_glob: "*.tar.gz"
+          # Arch — pkg.tar.zst + TGZ
+          - distro: arch
+            container: archlinux:latest
+            format: pkg
+            artifact: scaffold-arch-release
+            pkg_glob: "*.pkg.tar.zst"
+          - distro: arch
+            container: archlinux:latest
+            format: tgz
+            artifact: scaffold-arch-release
+            pkg_glob: "*.tar.gz"
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download package
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: /tmp/pkg
+
+      - name: Install package (DEB)
+        if: matrix.format == 'deb'
+        run: dpkg -i /tmp/pkg/${{ matrix.pkg_glob }}
+
+      - name: Install package (RPM)
+        if: matrix.format == 'rpm'
+        run: dnf install -y /tmp/pkg/${{ matrix.pkg_glob }}
+
+      - name: Install package (pkg.tar.zst)
+        if: matrix.format == 'pkg'
+        run: pacman -U --noconfirm /tmp/pkg/${{ matrix.pkg_glob }}
+
+      - name: Install package (TGZ)
+        if: matrix.format == 'tgz'
+        run: |
+          tar xzf /tmp/pkg/${{ matrix.pkg_glob }} -C /usr --strip-components=1
+
+      - name: Install runtime deps (Alpine)
+        if: matrix.distro == 'alpine'
+        run: apk add --no-cache libstdc++
+
+      - name: Test binary
+        run: |
+          actual=$(csv2json)
+          expected=$(printf 'csv\njson')
+          test "$actual" = "$expected"
+
+      - name: Install build tools (Debian)
+        if: matrix.distro == 'trixie'
+        run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build
+
+      - name: Install build tools (Fedora)
+        if: matrix.distro == 'fedora'
+        run: dnf install -y --setopt=install_weak_deps=False gcc-c++ cmake ninja-build
+
+      - name: Install build tools (Alpine)
+        if: matrix.distro == 'alpine'
+        run: apk add --no-cache g++ cmake samurai
+
+      - name: Install build tools (Arch)
+        if: matrix.distro == 'arch'
+        run: pacman -Sy --noconfirm --needed gcc cmake ninja
+
+      - name: Test library (find_package)
+        run: |
+          cmake -S ci/install-test -B /tmp/consumer-build -G Ninja
+          cmake --build /tmp/consumer-build
+          actual=$(/tmp/consumer-build/app)
+          expected=$(printf '0.1.0\ncsv\njson')
+          test "$actual" = "$expected"

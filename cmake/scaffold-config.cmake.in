@@ -1,0 +1,29 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+# ---------- Exported targets ----------
+include("${CMAKE_CURRENT_LIST_DIR}/scaffoldTargets.cmake")
+
+# ---------- Component validation ----------
+set(_scaffold_known_components core csv json convert)
+
+if(scaffold_FIND_COMPONENTS)
+    foreach(_comp IN LISTS scaffold_FIND_COMPONENTS)
+        if(NOT _comp IN_LIST _scaffold_known_components)
+            set(scaffold_FOUND FALSE)
+            set(scaffold_NOT_FOUND_MESSAGE
+                "scaffold: unknown component '${_comp}'. Known components: ${_scaffold_known_components}")
+            return()
+        endif()
+        if(NOT TARGET scaffold::${_comp})
+            set(scaffold_FOUND FALSE)
+            set(scaffold_NOT_FOUND_MESSAGE
+                "scaffold: component '${_comp}' requested but target scaffold::${_comp} not found.")
+            return()
+        endif()
+        set(scaffold_${_comp}_FOUND TRUE)
+    endforeach()
+endif()
+
+check_required_components(scaffold)

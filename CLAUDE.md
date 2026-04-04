@@ -1,0 +1,175 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Quick Start
+
+```bash
+just setup              # install pre-commit hook
+just test               # build debug + run all tests
+just check              # full validation (all profiles, lint, coverage, docs)
+```
+
+## Development Environments
+
+Four equivalent environments are available. All provide GCC 15, CMake, Ninja, mold, ccache, clang-format, clang-tidy, lcov, doxygen, graphviz, texlive, just, and gdb.
+
+| Environment | Entry command |
+|---|---|
+| Native (Arch) | Direct — tools installed locally |
+| Nix flake | `nix develop` |
+| Guix manifest | `guix shell -m manifest.scm` |
+| Dev container | Open in VS Code with Dev Containers extension |
+
+## Build Profiles
+
+All builds use CMake presets (`CMakePresets.json`), Ninja generator, and mold linker. Run `just` with no arguments to see all recipes and profiles.
+
+```bash
+just build              # debug (default)
+just build release      # release (stripped binaries)
+just build asan         # AddressSanitizer + UBSan
+just build tsan         # ThreadSanitizer
+```
+
+Profiles: `debug`, `release`, `coverage`, `asan`, `tsan`.
+
+## Testing
+
+Tests are plain C++ executables (no framework) run via ctest. Library tests validate internal behavior. Binary tests use `libs/test_support/subprocess.hpp` to launch the actual binary and verify stdout/stderr/exit code.
+
+```bash
+just test               # all tests (debug)
+just test release       # all tests (release)
+just test asan          # all tests under ASan + UBSan
+just test tsan          # all tests under TSan
+just test-one csv_test  # single test by name
+```
+
+## Code Coverage
+
+```bash
+just coverage           # build + test + HTML report (build/coverage/coverage/)
+just coverage-report    # machine-readable coverage.info only
+just open-coverage      # generate + open in browser
+```
+
+Coverage uses a dedicated build with `--coverage` flags. The `-ffile-prefix-map` reproducibility flag is disabled for coverage builds so lcov can resolve source paths. Test failure paths are marked with `LCOV_EXCL_START`/`LCOV_EXCL_STOP`.
+
+## Formatting and Linting
+
+```bash
+just format             # clang-format all sources (120-column, Allman braces)
+just format-check       # check without modifying (used by pre-commit hook)
+just lint               # clang-tidy on all sources (warnings as errors)
+```
+
+The `.clang-tidy` config enables aggressive checks from bugprone, cert, cppcoreguidelines, hicpp, misc, modernize, performance, portability, and readability groups. It adds `-Wno-unknown-warning-option` to suppress GCC-specific warning flags that clang doesn't understand. Naming conventions: `snake_case` for functions/variables/namespaces, `CamelCase` for classes, `_` suffix for private members.
+
+## Documentation
+
+```bash
+just docs               # HTML + PDF (build/docs/)
+just docs-html          # HTML only
+just open-docs          # generate + open in browser
+just deps               # CMake dependency graph as SVG (build/deps.svg)
+just open-deps          # generate + open in browser
+```
+
+Doxygen generates docs with call graphs, include graphs, and directory dependency diagrams (requires graphviz). All C++ source files must have doxygen comments. Public API functions must be annotated with their library's export macro.
+
+## Installation and Packaging
+
+```bash
+just install                # install to system prefix (release)
+just install-to /tmp/test   # install to custom prefix
+just package                # create TGZ, DEB, RPM via CPack
+nix build                   # build Nix package
+guix build -f package.scm   # build Guix package
+makepkg                     # build Arch Linux .pkg.tar.zst
+```
+
+All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, `json2csv`) have CMake install rules. Downstream consumers can use `find_package(scaffold REQUIRED COMPONENTS core csv json convert)` and link against any of `scaffold::core`, `scaffold::csv`, `scaffold::json`, or `scaffold::convert`. The install tree includes headers, static libraries, binaries, and CMake package config files.
+
+**Package definitions:**
+- CPack (TGZ/DEB/RPM): configured in `cmake/Packaging.cmake`
+- Nix: `packages.default` output in `flake.nix`
+- Guix: `package.scm`
+- Arch: `PKGBUILD` (uses `!lto` to avoid slim LTO objects in static archives)
+
+## CI
+
+GitHub Actions runs `just check` across 6 environments:
+
+```bash
+just ci-build trixie    # Debian Trixie (glibc, GCC 14)
+just ci-build fedora    # Fedora latest (glibc, GCC 15)
+just ci-build alpine    # Alpine edge (musl, GCC 15)
+just ci-build arch      # Arch Linux (glibc, GCC 15)
+```
+
+Plus Nix and Guix jobs. The `just check` recipe runs: format-check, build+test on all 5 profiles (debug, release, asan, tsan, coverage), coverage report, lint, docs, and dependency graph.
+
+CI also builds distribution packages (DEB, RPM, TGZ, pkg.tar.zst) and runs install tests on clean Debian, Fedora, Alpine, and Arch containers. Install tests verify the binary runs and a consumer project can link via `find_package`. The consumer test project is in `ci/install-test/`.
+
+## Architecture
+
+**Libraries** (`libs/<name>/`): Each has `include/<name>/`, `src/`, and `tests/`. Public headers are exposed via `target_include_directories(... PUBLIC include)`. Each library has a CMake-generated export header (`<name>/<name>_export.hpp`) for shared library support. Public functions are annotated with `<NAME>_EXPORT`.
+
+**Dependency graph:**
+```
+csv2json → convert → csv  → core
+                     json → core
+
+json2csv → csv  → core
+           json → core
+```
+
+**Binaries** (`bin/<name>/`): Each links against libraries via `target_link_libraries(... PRIVATE ...)`. Binary integration tests use `libs/test_support/subprocess.hpp` to spawn the built binary and assert on its output.
+
+**`libs/test_support/`**: Header-only INTERFACE library providing `subprocess::run()` for launching child processes with arbitrary args/env and capturing stdout, stderr, and exit code.
+
+**`cmake/`**: Reusable modules — `Ccache.cmake` (auto-detects ccache), `Coverage.cmake` (lcov targets), `Sanitizers.cmake` (ASan/UBSan/TSan), `Version.cmake` (generates `scaffold/version.hpp` from project version), `Install.cmake` (CMake package config and export set), `Packaging.cmake` (CPack for TGZ/DEB/RPM), `scaffold-config.cmake.in` (package config template with COMPONENTS support).
+
+## Compiler and Linker Settings
+
+- **C++26** with GCC, `-Werror` and aggressive warnings (see root `CMakeLists.txt`)
+- **Ninja** generator (set in `CMakePresets.json` base preset)
+- **mold** linker with SHA-256 build IDs
+- **ccache** auto-detected and used when available
+- **`-ffile-prefix-map`** remaps source paths for reproducible builds (disabled for coverage)
+- **C++ module scanning disabled** (`CMAKE_CXX_SCAN_FOR_MODULES OFF`) to keep compile_commands.json clean for clang-tidy
+- **Release binaries are stripped** (`-s` linker flag in release preset)
+
+## Reproducible Builds
+
+Release builds are deterministic given the same toolchain. For full reproducibility, pin `SOURCE_DATE_EPOCH`:
+
+```bash
+SOURCE_DATE_EPOCH=0 just build release
+```
+
+## Adding a New Library
+
+1. Create `libs/<name>/` with `include/<name>/`, `src/`, `tests/`
+2. Add `CMakeLists.txt` with `add_library`, `target_include_directories(... PUBLIC include ${CMAKE_BINARY_DIR}/generated)`, `generate_export_header`, and test executable
+3. Add `#include <<name>/<name>_export.hpp>` to the public header and annotate API with `<NAME>_EXPORT`
+4. Add `add_subdirectory(libs/<name>)` to root `CMakeLists.txt`
+
+## Adding a New Binary
+
+1. Create `bin/<name>/` with `main.cpp` and optionally `tests/`
+2. Add `CMakeLists.txt` with `add_executable`, `target_link_libraries`
+3. For integration tests: link against `test_support`, define `<NAME>_EXECUTABLE="$<TARGET_FILE:<name>>"`, use `subprocess::run()`
+4. Add `add_subdirectory(bin/<name>)` to root `CMakeLists.txt`
+5. Add a VS Code launch configuration in `.vscode/launch.json`
+
+## Adding a CI Container
+
+1. Create `ci/<distro>/Dockerfile` — install toolchain, `COPY . .`, `RUN just check`
+2. Add the distro name to the matrix in `.github/workflows/ci.yml`
+3. Test with `just ci-build <distro>`
+
+## Documentation Maintenance
+
+After making architectural changes — adding, removing, or renaming files, directories, libraries, binaries, or CI targets — update the relevant `README.md` files and this `CLAUDE.md` to reflect the changes. Every directory has a `README.md` with a file/directory table that must stay in sync with the actual contents. The root `README.md` has a project layout table and architecture diagram that must also be kept current.

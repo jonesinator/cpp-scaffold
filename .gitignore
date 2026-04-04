@@ -1,0 +1,6 @@
+build/
+CMakeUserPresets.json
+pkg/
+src/
+*.pkg.tar.zst
+result
