@@ -587,6 +587,9 @@ jobs:
     runs-on: ubuntu-24.04
     # Container options needed for reprotest's instrumentation:
     #   seccomp=unconfined  — setarch uses personality(2), blocked by default
+    #   apparmor=unconfined — Ubuntu 24.04 runners' docker-default AppArmor
+    #                         profile blocks the FUSE mount syscall even with
+    #                         CAP_SYS_ADMIN
     #   --cap-add SYS_ADMIN — disorderfs (FUSE) requires CAP_SYS_ADMIN to
     #                         mount in a container
     #   --device /dev/fuse  — disorderfs needs access to the fuse device
@@ -594,7 +597,7 @@ jobs:
     # fileordering/hostname perturbations reprotest applies around it.
     container:
       image: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
-      options: --security-opt seccomp=unconfined --cap-add SYS_ADMIN --device /dev/fuse
+      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add SYS_ADMIN --device /dev/fuse
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}

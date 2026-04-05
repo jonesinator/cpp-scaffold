@@ -178,7 +178,7 @@ SOURCE_DATE_EPOCH=0 just build release
 
 **Note on `+aslr`**: we keep `aslr` enabled (not disabled) even though it's irrelevant to build artifacts. Disabling aslr makes reprotest append `-R` to its `setarch` wrapper, which calls `personality(2)` — blocked by Docker's default seccomp profile. Enabling aslr means reprotest leaves the personality syscall alone.
 
-**CI container privileges**: the `reproducibility` job runs in trixie-slim with `--security-opt seccomp=unconfined --cap-add SYS_ADMIN --device /dev/fuse`. These aren't for the *build* — they're for reprotest's instrumentation: `setarch` / `personality(2)` needs relaxed seccomp, and disorderfs (a FUSE filesystem used by the `fileordering` variation) needs CAP_SYS_ADMIN + `/dev/fuse` access to mount inside the container.
+**CI container privileges**: the `reproducibility` job runs in trixie-slim with `--security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add SYS_ADMIN --device /dev/fuse`. These aren't for the *build* — they're for reprotest's instrumentation: `setarch` / `personality(2)` needs relaxed seccomp, and disorderfs (a FUSE filesystem used by the `fileordering` variation) needs CAP_SYS_ADMIN + `/dev/fuse` access + Ubuntu 24.04's docker-default AppArmor profile turned off (it blocks the FUSE mount syscall even with CAP_SYS_ADMIN). If FUSE ever stops working on the runner, drop `fileordering` from the defaults in `scripts/verify-reproducibility.sh` as a fallback.
 
 **Reproducibility-relevant CMake settings** (root `CMakeLists.txt` and `cmake/`):
 - `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
