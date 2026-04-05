@@ -97,12 +97,17 @@ The Nix flake and Guix manifest provide fully reproducible, hermetic toolchains.
 
 ### Continuous Integration
 
-GitHub Actions runs `just check` (the full validation suite) across six parallel jobs:
+GitHub Actions runs a decomposed-by-concern pipeline:
 
-- **Nix** and **Guix** — reproducible package manager environments, also builds and tests the Nix/Guix package
-- **Debian Trixie**, **Fedora**, **Alpine**, **Arch Linux** — container builds covering glibc and musl libc
+- **Single-run check jobs** (Debian trixie): `format-check`, `lint`, `docs`, `deps`, `coverage` — the latter three upload their outputs as artifacts.
+- **`test` matrix** (16 jobs): 4 distros × 4 profiles (debug/release/asan/tsan).
+- **`package` matrix** (16 jobs): per-component DEB/RPM/APK/pkg.tar.zst packages plus monolithic TGZ for each distro × profile.
+- **`install-test` matrix** (7 jobs): verifies native and TGZ install on clean containers, tests the binary plus `find_package` consumer integration.
+- **Nix**: validates the Nix flake with `nix build` + smoke-test.
+- **Static binaries**: musl-static `csv2json` and `json2csv` for x86_64, smoke-tested on alpine/debian/fedora/arch/busybox.
+- **Guix** (manual-dispatch): in a separate workflow, validates the Guix package definition.
 
-Additional CI jobs build distribution packages (DEB, RPM, TGZ, pkg.tar.zst) and verify that they install correctly on clean containers by testing the installed binary and `find_package` integration from a consumer project.
+All building jobs use `SOURCE_DATE_EPOCH` computed from the git commit timestamp, making builds reproducible per commit.
 
 ## Task Runner
 

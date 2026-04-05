@@ -4,7 +4,7 @@ Library providing `json::greet()`. Depends publicly on `core`. Installed as the 
 
 | Path | Description |
 |---|---|
-| [CMakeLists.txt](CMakeLists.txt) | Build definition — static library with export header, install rules, core dependency, and unit test |
+| [CMakeLists.txt](CMakeLists.txt) | Build definition — both shared (`libscaffold-json.so.0`) and static (`libscaffold-json.a`) library targets with SOVERSION, export header, per-component install rules, core dependency, and unit test |
 | [include/json/json.hpp](include/json/json.hpp) | Public header — declares `json::greet()` |
 | [src/json.cpp](src/json.cpp) | Implementation — calls `core::println("json")` |
 | [tests/json_test.cpp](tests/json_test.cpp) | Unit test — verifies `json::greet()` output |

@@ -4,7 +4,7 @@ Foundation library providing shared output functionality used by other libraries
 
 | Path | Description |
 |---|---|
-| [CMakeLists.txt](CMakeLists.txt) | Build definition — static library with export header, install rules, and unit test |
+| [CMakeLists.txt](CMakeLists.txt) | Build definition — both shared (`libscaffold-core.so.0`) and static (`libscaffold-core.a`) library targets with SOVERSION, export header, per-component install rules, and unit test |
 | [include/core/core.hpp](include/core/core.hpp) | Public header — declares `core::println()` |
 | [src/core.cpp](src/core.cpp) | Implementation — wraps `std::println` via `std::cout` |
 | [tests/core_test.cpp](tests/core_test.cpp) | Unit test — verifies `core::println()` output |

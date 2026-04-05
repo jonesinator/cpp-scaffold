@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Set SOURCE_DATE_EPOCH
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - uses: PromyLOPh/guix-install-action@v1
       # Skip `just check` — Guix's clang-tools version is incompatible with
       # GCC 15's libstdc++ C++26 macros (_GLIBCXX26_CONSTEXPR etc.), which

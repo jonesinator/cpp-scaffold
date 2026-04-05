@@ -104,18 +104,19 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 
 ## CI
 
-GitHub Actions runs `just check` across 6 environments:
+`.github/workflows/ci.yml` is decomposed by concern:
 
-```bash
-just ci-build trixie    # Debian Trixie (glibc, GCC 14)
-just ci-build fedora    # Fedora latest (glibc, GCC 15)
-just ci-build alpine    # Alpine edge (musl, GCC 15)
-just ci-build arch      # Arch Linux (glibc, GCC 15)
-```
+- **`setup`** computes `SOURCE_DATE_EPOCH` from the git commit timestamp for reproducible builds; all building jobs read it via job outputs.
+- **`nix`** runs `just check` + `nix build` end-to-end.
+- **Single-run check jobs** (Debian trixie): `format-check`, `lint`, `docs`, `deps`, `coverage`. The latter three upload their outputs as artifacts.
+- **`test` matrix** (4 distros × 4 profiles = 16 jobs): runs `just test <profile>` on each combination.
+- **`package` matrix** (4 distros × 4 profiles = 16 jobs): produces per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) plus monolithic TGZ.
+- **`install-test` matrix** (7 jobs): verifies `apt install`/`dnf install`/`pacman -U`/`apk add`/TGZ extraction resolves dependencies correctly, runs the installed binary, and builds a `find_package` consumer project.
+- **`static-binaries`** produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries on Alpine; smoke-tested on alpine/debian/fedora/arch plus busybox (via `docker run`).
 
-Plus Nix and Guix jobs. The `just check` recipe runs: format-check, build+test on all 5 profiles (debug, release, asan, tsan, coverage), coverage report, lint, docs, and dependency graph.
+For local CI container builds, use `just ci-build <distro>` — runs `just check` inside a container matching that distro.
 
-CI also builds distribution packages (DEB, RPM, TGZ, pkg.tar.zst) and runs install tests on clean Debian, Fedora, Alpine, and Arch containers. Install tests verify the binary runs and a consumer project can link via `find_package`. The consumer test project is in `ci/install-test/`.
+`guix.yml` is a separate manual-dispatch-only workflow (Guix bootstrap is slow; its clang-tools is incompatible with GCC 15's C++26 libstdc++ macros so it skips `just lint`).
 
 ## Architecture
 

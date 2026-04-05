@@ -1,8 +1,10 @@
 # ci/
 
-Dockerfiles for CI container builds and install-test resources. Each distro subdirectory targets a different Linux distribution. All containers install the full toolchain, copy the source, and run `just check`.
+Per-distro Dockerfiles used for **local CI container builds** (via `just ci-build <distro>`), and the install-test consumer project. Each Dockerfile installs the full toolchain and runs `just check` end-to-end — useful for reproducing CI failures locally.
 
-Build any container with: `just ci-build <distro>`
+**Note:** the actual GitHub Actions workflow does NOT use these Dockerfiles. It uses base distro images directly with explicit, decomposed steps (see [.github/workflows/ci.yml](../.github/workflows/ci.yml)). The Dockerfiles here are for local debugging convenience.
+
+Build any container locally with: `just ci-build <distro>`
 
 | Directory | Base image | libc | Notes |
 |---|---|---|---|
