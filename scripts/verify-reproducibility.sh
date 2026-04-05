@@ -117,6 +117,9 @@ build_cmd='
        build/release/_repro-artifacts/ &&
     if ls build/release/scaffold-*.deb >/dev/null 2>&1; then
         cp build/release/scaffold-*.deb build/release/_repro-artifacts/
+    fi &&
+    if ls build/release/scaffold-*.rpm >/dev/null 2>&1; then
+        cp build/release/scaffold-*.rpm build/release/_repro-artifacts/
     fi
 '
 

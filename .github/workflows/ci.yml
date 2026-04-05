@@ -583,8 +583,19 @@ jobs:
           test "$actual" = "$expected"
 
   reproducibility:
-    name: Reproducibility (trixie, release)
+    name: Reproducibility (${{ matrix.distro }}, release)
     runs-on: ubuntu-24.04
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: trixie
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+            cpack_generators: "TGZ;DEB"
+          - distro: fedora
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            cpack_generators: "TGZ;RPM"
     # Container options needed for reprotest's instrumentation:
     #   seccomp=unconfined  — setarch uses personality(2), blocked by default
     #   apparmor=unconfined — Ubuntu 24.04 runners' docker-default AppArmor
@@ -596,16 +607,16 @@ jobs:
     # None of this affects the build itself; it's all for the
     # fileordering/hostname perturbations reprotest applies around it.
     container:
-      image: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+      image: ${{ matrix.container }}
       options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add SYS_ADMIN --device /dev/fuse
-    needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
-      CPACK_GENERATORS: "TGZ;DEB"
+      CPACK_GENERATORS: ${{ matrix.cpack_generators }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - name: Install reprotest + toolchain
+      - name: Install reprotest + toolchain (Debian)
+        if: matrix.distro == 'trixie'
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
             reprotest disorderfs faketime diffoscope-minimal \
@@ -613,6 +624,17 @@ jobs:
           # reprotest does not hard-depend on diffoscope in trixie (it can
           # fall back to plain diff), so pull diffoscope-minimal in
           # explicitly — we need its archive-aware output to be useful.
+
+      - name: Install reprotest + toolchain (Fedora)
+        if: matrix.distro == 'fedora'
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            reprotest disorderfs libfaketime diffoscope \
+            gcc-c++ cmake ninja-build mold rpm-build bash tzdata \
+            procps-ng util-linux hostname
+          # procps-ng (nproc), util-linux (unshare/taskset/setarch),
+          # hostname (hostname/domainname) are part of Debian's base
+          # but not the fedora:latest slim image.
 
       - name: Run reprotest
         # shell: bash forces GitHub Actions to invoke with `-o pipefail`.
@@ -625,7 +647,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
-          name: reproducibility-diff
+          name: reproducibility-diff-${{ matrix.distro }}
           path: /tmp/reprotest-log.txt
           if-no-files-found: ignore
 

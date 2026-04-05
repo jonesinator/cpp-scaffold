@@ -123,7 +123,7 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 - **`package` matrix** (4 distros × 4 profiles = 16 jobs): produces per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) plus monolithic TGZ.
 - **`install-test` matrix** (7 jobs): verifies `apt install`/`dnf install`/`pacman -U`/`apk add`/TGZ extraction resolves dependencies correctly, runs the installed binary, and builds a `find_package` consumer project.
 - **`static-binaries`** produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries on Alpine; smoke-tested on alpine/debian/fedora/arch plus busybox (via `docker run`).
-- **`reproducibility`** runs `reprotest` on trixie/release with the default-enabled variations (`build_path`, `environment`, `exec_path`, `fileordering` via disorderfs, `home`, `locales`, `time`, `timezone`, `umask`, `domain_host`). Covers raw binaries, shared/static libs, TGZ, and all per-component DEBs. See the Reproducible Builds section below for which variations are skipped and why. On failure, uploads reprotest's stdout (including the `diffoscope` output) as the `reproducibility-diff` artifact.
+- **`reproducibility` matrix** (2 jobs: trixie + fedora) runs `reprotest` on release with the default-enabled variations (`build_path`, `environment`, `exec_path`, `fileordering` via disorderfs, `home`, `locales`, `time`, `timezone`, `umask`, `domain_host`). Covers raw binaries, shared/static libs, TGZ, and the distro-native package format (`TGZ;DEB` on trixie, `TGZ;RPM` on fedora). See the Reproducible Builds section below for which variations are skipped and why. On failure, uploads reprotest's stdout as the `reproducibility-diff-<distro>` artifact.
 
 For local CI container builds, use `just ci-build <distro>` — runs `just check` inside a container matching that distro.
 
@@ -166,7 +166,7 @@ Release builds are deterministic given the same toolchain. For full reproducibil
 SOURCE_DATE_EPOCH=0 just build release
 ```
 
-**Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) wraps Debian's [`reprotest`](https://salsa.debian.org/reproducible-builds/reprotest) — it stages a clean source tree to `/tmp`, runs the build twice under systematically perturbed environments, and diffs every artifact (binaries, shared/static libs, TGZ, DEBs) via `diffoscope`. Install with `pacman -S reprotest disorderfs` (Arch), `apt install reprotest disorderfs` (Debian/Ubuntu), or `dnf install reprotest disorderfs` (Fedora). The `reproducibility` CI job runs the same script against `trixie-slim` + `TGZ;DEB`.
+**Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) wraps Debian's [`reprotest`](https://salsa.debian.org/reproducible-builds/reprotest) — it stages a clean source tree to `/tmp`, runs the build twice under systematically perturbed environments, and diffs every artifact (binaries, shared/static libs, TGZ, DEBs/RPMs) via `diffoscope`. Install with `pacman -S reprotest disorderfs` (Arch), `apt install reprotest disorderfs` (Debian/Ubuntu), or `dnf install reprotest disorderfs` (Fedora). CI runs the same script as a 2-entry matrix: `trixie-slim` + `TGZ;DEB` and `fedora:latest` + `TGZ;RPM`.
 
 **Variations enabled by default** (in `scripts/verify-reproducibility.sh`): `aslr`, `build_path`, `environment`, `exec_path`, `fileordering` (via disorderfs), `home`, `locales`, `time` (faketime), `timezone`, `umask`, plus `domain_host` (hostname/domainname) *if* the `domainname` binary is available. Override via `REPROTEST_VARIATIONS`.
 
