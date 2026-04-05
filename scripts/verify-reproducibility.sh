@@ -59,14 +59,19 @@ export CPACK_GENERATORS
 
 # Default variation set. Skipped variations (with reasoning):
 #   -kernel:      requires a different host kernel (impractical in CI)
-#   -aslr:        only affects runtime layout, not build artifacts
 #   -num_cpus:    interacts badly with disorderfs on some systems
 #                 (our project is too small for parallel-link races anyway)
 #   -user_group:  reprotest silently no-ops this without additional user
 #                 accounts configured via --variations=user_group.available+=
+# Note on aslr: counterintuitively we keep it ENABLED (+aslr). When disabled,
+# reprotest appends `-R` to the setarch wrapper to forcibly disable ASLR,
+# which calls personality(2) and fails with EPERM under the default Docker
+# seccomp profile in CI. Enabling aslr means "leave it alone" in reprotest's
+# model — no personality() syscall needed. ASLR doesn't affect build output,
+# so either value is correct from a reproducibility standpoint.
 # domain_host is enabled only if the `domainname` binary is available.
 # (Debian ships it in the `hostname` package; Arch only has it via AUR.)
-default_variations="+build_path,+environment,+exec_path,+fileordering"
+default_variations="+aslr,+build_path,+environment,+exec_path,+fileordering"
 default_variations+=",+home,+locales,+time,+timezone,+umask"
 if command -v domainname >/dev/null 2>&1; then
     default_variations+=",+domain_host"

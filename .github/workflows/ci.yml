@@ -585,7 +585,12 @@ jobs:
   reproducibility:
     name: Reproducibility (trixie, release)
     runs-on: ubuntu-24.04
-    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+    # `seccomp=unconfined` lets reprotest's `setarch` wrapper call the
+    # personality(2) syscall without EPERM. The build itself doesn't need
+    # the relaxed profile — this is purely for reprotest's instrumentation.
+    container:
+      image: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+      options: --security-opt seccomp=unconfined
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
@@ -596,13 +601,17 @@ jobs:
       - name: Install reprotest + toolchain
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
-            reprotest disorderfs faketime \
+            reprotest disorderfs faketime diffoscope-minimal \
             g++ cmake ninja-build mold dpkg-dev bash tzdata
-          # reprotest pulls in diffoscope + disorderfs transitively on
-          # Debian but we list the key variation-providers explicitly so
-          # missing deps fail here, not deep inside reprotest.
+          # reprotest does not hard-depend on diffoscope in trixie (it can
+          # fall back to plain diff), so pull diffoscope-minimal in
+          # explicitly — we need its archive-aware output to be useful.
 
       - name: Run reprotest
+        # shell: bash forces GitHub Actions to invoke with `-o pipefail`.
+        # Without it, container jobs default to /bin/sh which has no
+        # pipefail — a failing `reprotest | tee` pipeline would exit 0.
+        shell: bash
         run: bash scripts/verify-reproducibility.sh 2>&1 | tee /tmp/reprotest-log.txt
 
       - name: Save reprotest stdout (on failure)

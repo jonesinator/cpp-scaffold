@@ -168,14 +168,15 @@ SOURCE_DATE_EPOCH=0 just build release
 
 **Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) wraps Debian's [`reprotest`](https://salsa.debian.org/reproducible-builds/reprotest) — it stages a clean source tree to `/tmp`, runs the build twice under systematically perturbed environments, and diffs every artifact (binaries, shared/static libs, TGZ, DEBs) via `diffoscope`. Install with `pacman -S reprotest disorderfs` (Arch), `apt install reprotest disorderfs` (Debian/Ubuntu), or `dnf install reprotest disorderfs` (Fedora). The `reproducibility` CI job runs the same script against `trixie-slim` + `TGZ;DEB`.
 
-**Variations enabled by default** (in `scripts/verify-reproducibility.sh`): `build_path`, `environment`, `exec_path`, `fileordering` (via disorderfs), `home`, `locales`, `time` (faketime), `timezone`, `umask`, plus `domain_host` (hostname/domainname) *if* the `domainname` binary is available. Override via `REPROTEST_VARIATIONS`.
+**Variations enabled by default** (in `scripts/verify-reproducibility.sh`): `aslr`, `build_path`, `environment`, `exec_path`, `fileordering` (via disorderfs), `home`, `locales`, `time` (faketime), `timezone`, `umask`, plus `domain_host` (hostname/domainname) *if* the `domainname` binary is available. Override via `REPROTEST_VARIATIONS`.
 
 **Variations disabled by default** (and why — to enable, pass `REPROTEST_VARIATIONS='-all,+<wanted>'`):
 - `kernel` — needs a different host kernel; impractical in CI
-- `aslr` — only affects runtime address layout, not build artifacts
 - `num_cpus` — interacts flakily with disorderfs in our testing; the project is too small for parallel-link races to matter in practice
 - `user_group` — reprotest silently no-ops this without pre-configured extra user accounts (needs `--variations='user_group.available+=user:group'`); turn on once we actually provision such users
 - `domain_host` (on Arch only) — needs the `domainname` binary, which Arch ships only via AUR (`nis`/`yp-tools`); automatically enabled on Debian/Fedora where the `hostname` package provides it
+
+**Note on `+aslr`**: we keep `aslr` enabled (not disabled) even though it's irrelevant to build artifacts. Disabling aslr makes reprotest append `-R` to its `setarch` wrapper, which calls `personality(2)` — blocked by Docker's default seccomp profile. Enabling aslr means reprotest leaves the personality syscall alone. The CI job also sets `options: --security-opt seccomp=unconfined` on the container as a belt-and-suspenders measure.
 
 **Reproducibility-relevant CMake settings** (root `CMakeLists.txt` and `cmake/`):
 - `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
