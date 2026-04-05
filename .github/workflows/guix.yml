@@ -29,3 +29,5 @@ jobs:
           '
       - run: guix build -f package.scm
       - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"
+      - name: Verify derivation is bit-reproducible
+        run: guix build --check -f package.scm

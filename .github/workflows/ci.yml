@@ -60,6 +60,9 @@ jobs:
       - run: nix develop --command just check
       - run: nix build
       - run: ./result/bin/csv2json | grep -q csv
+      - name: Verify derivation is bit-reproducible
+        run: nix build --rebuild
+
 
   format-check:
     name: Format check

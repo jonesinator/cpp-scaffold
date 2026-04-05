@@ -124,10 +124,11 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 - **`install-test` matrix** (7 jobs): verifies `apt install`/`dnf install`/`pacman -U`/`apk add`/TGZ extraction resolves dependencies correctly, runs the installed binary, and builds a `find_package` consumer project.
 - **`static-binaries`** produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries on Alpine; smoke-tested on alpine/debian/fedora/arch plus busybox (via `docker run`).
 - **`reproducibility` matrix** (2 jobs: trixie + fedora) runs `reprotest` on release with the default-enabled variations (`build_path`, `environment`, `exec_path`, `fileordering` via disorderfs, `home`, `locales`, `time`, `timezone`, `umask`, `domain_host`). Covers raw binaries, shared/static libs, TGZ, and the distro-native package format (`TGZ;DEB` on trixie, `TGZ;RPM` on fedora). See the Reproducible Builds section below for which variations are skipped and why. On failure, uploads reprotest's stdout as the `reproducibility-diff-<distro>` artifact.
+- **`nix` job** additionally runs `nix build --rebuild` — Nix's own reproducibility check: rebuilds the derivation and byte-compares against the existing store output, failing with a diff if they differ.
 
 For local CI container builds, use `just ci-build <distro>` — runs `just check` inside a container matching that distro.
 
-`guix.yml` is a separate manual-dispatch-only workflow (Guix bootstrap is slow; its clang-tools is incompatible with GCC 15's C++26 libstdc++ macros so it skips `just lint`).
+`guix.yml` is a separate manual-dispatch-only workflow (Guix bootstrap is slow; its clang-tools is incompatible with GCC 15's C++26 libstdc++ macros so it skips `just lint`). It also runs `guix build --check -f package.scm` to verify the Guix package is bit-reproducible (analogue of `nix build --rebuild`).
 
 ## Architecture
 
