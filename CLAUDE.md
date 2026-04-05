@@ -184,6 +184,7 @@ SOURCE_DATE_EPOCH=0 just build release
 - `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
 - `-Wl,--build-id=sha256` makes the build-ID content-addressed (not timestamp-based)
 - `CMAKE_BUILD_RPATH_USE_ORIGIN=ON` rewrites build-tree `DT_RUNPATH` to `$ORIGIN`-relative so the source directory doesn't leak into ELF binaries
+- `CMAKE_<LANG>_ARCHIVE_{CREATE,APPEND,FINISH}` force `ar`/`ranlib` into deterministic (`D`) mode — Fedora's binutils doesn't default to this, so without the override the symbol-table entry's mtime and each object's mode bits leak wall-clock time and the build's umask into every `.a`
 - `CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS=0755` pins directory modes created by `install(DIRECTORY)` regardless of umask
 - A post-install `install(CODE ... ALL_COMPONENTS)` in `cmake/Install.cmake` walks the staging tree and chmods every directory to 0755 (covers implicit parents and runs for every CPack per-component install, not just "Unspecified")
 - `CPACK_POST_BUILD_SCRIPTS=cmake/SortTarballs.cmake` re-archives each CPack `.tar.gz` with `--sort=name --owner=0 --group=0 gzip -n` so the TGZ is invariant to filesystem readdir order and the packaging user's identity

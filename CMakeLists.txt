@@ -40,6 +40,17 @@ add_link_options(-Wl,--build-id=sha256)
 # even though everything else is deterministic. Install-tree RPATHs are
 # controlled separately via CMAKE_INSTALL_RPATH and are unaffected.
 set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
+# Force `ar` into deterministic mode (`D` modifier) for static libraries.
+# Some distros (Fedora) do not enable deterministic archives by default, so
+# the symbol-table entry's mtime and each member's mode bits leak wall-clock
+# time and the build's umask into the .a. `D` zeros all timestamps and sets
+# uid/gid=0 and mode=0644 for every member regardless of the source file.
+set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_APPEND   "<CMAKE_AR> Dq <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_FINISH   "<CMAKE_RANLIB> -D <TARGET>")
+set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> Dqc <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> Dq <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -D <TARGET>")
 
 # ---------- Compiler warnings ----------
 add_compile_options(
