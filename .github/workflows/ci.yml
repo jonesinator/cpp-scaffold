@@ -371,7 +371,13 @@ jobs:
       - name: Build-env SBOM
         run: |
           mkdir -p sboms
-          syft scan dir:/ -o spdx-json=sboms/buildenv-${{ matrix.distro }}-${{ matrix.profile }}.spdx.json
+          # Exclude GitHub Actions runner host-mounts (/__w, /__e, /__t tool cache,
+          # /github, /home/runner) so we only inventory the build container's
+          # installed toolchain, not the runner's preinstalled Go/Node/Python.
+          syft scan dir:/ \
+            --exclude './__w/**' --exclude './__e/**' --exclude './__t/**' \
+            --exclude './github/**' --exclude './home/runner/**' --exclude './__act/**' \
+            -o spdx-json=sboms/buildenv-${{ matrix.distro }}-${{ matrix.profile }}.spdx.json
 
       - name: Build + Package (CPack)
         run: |
@@ -597,7 +603,14 @@ jobs:
             echo "=== Scanning $name ==="
             # Write JSON report (always)
             grype sbom:"$sbom" -o json > "cve-reports/$name.cve.json" 2>/dev/null || true
-            # Human-readable, fails on critical
+            # Buildenv SBOMs describe the build toolchain, not shipped artifacts —
+            # scan for visibility but don't gate CI on findings (consumers aren't
+            # exposed to buildenv vulns).
+            if [[ "$name" == buildenv-* ]]; then
+              grype sbom:"$sbom" -o table || true
+              continue
+            fi
+            # Product SBOMs (source, packages, static binaries): fail on critical
             if ! grype sbom:"$sbom" --fail-on critical -o table; then
               echo "FAIL: $name has critical CVEs"
               fail=1

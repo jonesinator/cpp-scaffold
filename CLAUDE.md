@@ -99,7 +99,7 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 
 **Build provenance:** every published artifact (packages + static binaries) has a SLSA v1 provenance attestation via `actions/attest-build-provenance`. Verify with `gh attestation verify <file> --repo owner/scaffold`.
 
-**CVE scanning:** the `cve-scan` job runs Grype against every SBOM produced (source, per-package, build-env, static binary). Fails CI on critical severity. Reports uploaded as `scaffold-cve-reports` artifact.
+**CVE scanning:** the `cve-scan` job runs Grype against every SBOM produced (source, per-package, build-env, static binary). Fails CI on critical severity in **product** SBOMs (source, packages, static binaries). Build-env SBOMs are scanned for visibility but are informational-only (non-gating) since the toolchain doesn't ship in artifacts. Reports uploaded as `scaffold-cve-reports` artifact.
 
 **Releases:** Pushing a `v*` git tag triggers the `release` job which downloads all CI artifacts, generates a SHA256SUMS file, and creates a GitHub Release with everything attached.
 
