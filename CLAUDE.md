@@ -189,6 +189,7 @@ SOURCE_DATE_EPOCH=0 just build release
 - A post-install `install(CODE ... ALL_COMPONENTS)` in `cmake/Install.cmake` walks the staging tree and chmods every directory to 0755 (covers implicit parents and runs for every CPack per-component install, not just "Unspecified")
 - `CPACK_POST_BUILD_SCRIPTS=cmake/SortTarballs.cmake` re-archives each CPack `.tar.gz` with `--sort=name --owner=0 --group=0 gzip -n` so the TGZ is invariant to filesystem readdir order and the packaging user's identity
 - For DEB packaging, callers must invoke `cpack` with `umask 022` (the standard Debian packaging umask) — `dpkg-deb` records the calling process's umask into `ar`-archive member modes. The verify script and CI job both set `umask 022` around the `cpack` invocation.
+- For RPM packaging, `CPACK_RPM_SPEC_MORE_DEFINE` in `cmake/Packaging.cmake` injects four rpm macros into every generated spec: `_buildhost` pins `RPMTAG_BUILDHOST`, `use_source_date_epoch_as_buildtime=1` clamps `RPMTAG_BUILDTIME` to `SOURCE_DATE_EPOCH` (rpmbuild otherwise uses wall-clock `time()`), `clamp_mtime_to_source_date_epoch=1` clamps mtimes in the cpio payload, and `source_date_epoch_from_changelog=0` stops rpmbuild from auto-deriving SDE from our (empty) changelog.
 
 ## Adding a New Library
 

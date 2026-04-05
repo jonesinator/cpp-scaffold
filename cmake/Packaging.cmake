@@ -90,11 +90,25 @@ set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= $
 # ---------- RPM package metadata ----------
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries")
-# Pin the RPMTAG_BUILDHOST header field to a fixed value. Without this,
-# rpmbuild records the build machine's hostname, which differs between
-# reproducibility runs (reprotest's domain_host variation changes it via
-# unshare --uts) and makes every .rpm hash non-deterministic.
-set(CPACK_RPM_PACKAGE_BUILD_HOST "reproducible")
+# Force rpmbuild into reproducible mode via rpm macros injected into every
+# generated spec. rpm's own reproducibility knobs:
+#   _buildhost                         — pins RPMTAG_BUILDHOST (otherwise
+#                                        rpmbuild records gethostname(),
+#                                        which reprotest's domain_host
+#                                        variation shifts between runs)
+#   use_source_date_epoch_as_buildtime — forces RPMTAG_BUILDTIME to
+#                                        $SOURCE_DATE_EPOCH instead of
+#                                        wall-clock time(NULL)
+#   clamp_mtime_to_source_date_epoch   — clamps every file's mtime in the
+#                                        cpio payload to SOURCE_DATE_EPOCH
+#   source_date_epoch_from_changelog 0 — don't auto-derive SDE from the
+#                                        (empty) changelog; trust the env
+# See https://rpm-software-management.github.io/rpm/manual/reproducible_builds.html
+set(CPACK_RPM_SPEC_MORE_DEFINE "\
+%define _buildhost reproducible.build
+%define source_date_epoch_from_changelog 0
+%define use_source_date_epoch_as_buildtime 1
+%define clamp_mtime_to_source_date_epoch 1")
 
 # Runtime library packages
 foreach(_lib core csv json convert)
