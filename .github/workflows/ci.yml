@@ -214,7 +214,7 @@ jobs:
           - target: debian
             container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
           - target: fedora
-            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
           - target: arch
             container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
     container: ${{ matrix.container }}
@@ -263,7 +263,7 @@ jobs:
           - distro: trixie
             container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
           - distro: fedora
-            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
           - distro: alpine
             container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
           - distro: arch
@@ -309,7 +309,7 @@ jobs:
             use_makepkg: false
             use_abuild: false
           - distro: fedora
-            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             generators: "TGZ;RPM"
             use_makepkg: false
             use_abuild: false
@@ -470,11 +470,11 @@ jobs:
             pkg_glob: "*.tar.gz"
           # Fedora — RPM + TGZ
           - distro: fedora
-            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             format: rpm
             pkg_glob: "*.rpm"
           - distro: fedora
-            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
+            container: registry.fedoraproject.org/fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             format: tgz
             pkg_glob: "*.tar.gz"
           # Alpine — APK + TGZ
