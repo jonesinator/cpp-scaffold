@@ -94,6 +94,10 @@ include(cmake/Sanitizers.cmake)
 include(GenerateExportHeader)
 add_compile_options(-fvisibility=hidden -fvisibility-inlines-hidden)
 
+# ---------- Library / binary helpers ----------
+include(cmake/ScaffoldLibrary.cmake)
+include(cmake/ScaffoldBinary.cmake)
+
 # ---------- Version header ----------
 include(cmake/Version.cmake)
 

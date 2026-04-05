@@ -194,17 +194,19 @@ SOURCE_DATE_EPOCH=0 just build release
 
 ## Adding a New Library
 
-1. Create `libs/<name>/` with `include/<name>/`, `src/`, `tests/`
-2. Add `CMakeLists.txt` with `add_library`, `target_include_directories(... PUBLIC include ${CMAKE_BINARY_DIR}/generated)`, `generate_export_header`, and test executable
+1. Create `libs/<name>/` with `include/<name>/`, `src/<name>.cpp`, `tests/<name>_test.cpp`
+2. Add a one-line `CMakeLists.txt`: `scaffold_add_library(NAME <name> DEPENDS <deps>...)` (defined in `cmake/ScaffoldLibrary.cmake`). It wires both SHARED and STATIC targets, aliases, export header, install rules, and the test executable. Pass logical dep names only (e.g. `DEPENDS core`) — the function pairs shared↔shared and static↔static automatically. Override `SOURCES` if the library has more than one `.cpp`.
 3. Add `#include <<name>/<name>_export.hpp>` to the public header and annotate API with `<NAME>_EXPORT`
 4. Add `add_subdirectory(libs/<name>)` to root `CMakeLists.txt`
 
+The packaging metadata (DEB/RPM per-component package names + dependency strings) and the `find_package(scaffold COMPONENTS ...)` component list are derived automatically from the `scaffold_add_library()` call's `NAME` + `DEPENDS` — no edits needed in `cmake/Packaging.cmake` or `cmake/scaffold-config.cmake.in`.
+
 ## Adding a New Binary
 
-1. Create `bin/<name>/` with `main.cpp` and optionally `tests/`
-2. Add `CMakeLists.txt` with `add_executable`, `target_link_libraries`
-3. For integration tests: link against `test_support`, define `<NAME>_EXECUTABLE="$<TARGET_FILE:<name>>"`, use `subprocess::run()`
-4. Add `add_subdirectory(bin/<name>)` to root `CMakeLists.txt`
+1. Create `bin/<name>/` with `main.cpp` and `tests/<name>_test.cpp`
+2. Add a one-line `CMakeLists.txt`: `scaffold_add_binary(NAME <name> DEPENDS <libs>...)` (defined in `cmake/ScaffoldBinary.cmake`). It wires the executable, the `SCAFFOLD_STATIC_BINARIES` branching, the install rule, and the integration test (linking `test_support` with `<NAME_UPPER>_EXECUTABLE` pointing at the built binary). `<name>` must be a valid C identifier since it seeds that macro name.
+3. Tests use `subprocess::run()` from `test_support` to spawn the binary and assert on its output.
+4. Add `add_subdirectory(bin/<name>)` to root `CMakeLists.txt` — packaging metadata is derived automatically from `DEPENDS` (see "Adding a New Library" above).
 5. Add a VS Code launch configuration in `.vscode/launch.json`
 
 ## Adding a CI Container

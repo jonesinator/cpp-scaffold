@@ -53,39 +53,62 @@ set(_soversion 0)
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${CPACK_PACKAGE_CONTACT}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
 
-# Per-component DEB package names and dependencies.
+# Per-component DEB package names and dependencies are derived from the
+# library/binary registry populated by scaffold_add_library/_binary(). See
+# cmake/ScaffoldLibrary.cmake for the global-property contract.
+get_property(_scaffold_libs GLOBAL PROPERTY SCAFFOLD_LIBRARIES)
+get_property(_scaffold_bins GLOBAL PROPERTY SCAFFOLD_BINARIES)
+
 # Runtime library packages (libscaffold-<name>0)
-foreach(_lib core csv json convert)
+foreach(_lib IN LISTS _scaffold_libs)
     string(TOUPPER "${_lib}_LIB" _comp)
     set(CPACK_DEBIAN_${_comp}_PACKAGE_NAME "libscaffold-${_lib}${_soversion}")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_LIBRARY_DEPS_${_lib})
+    set(_dep_str "")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str "libscaffold-${_dep}${_soversion} (= ${PROJECT_VERSION}), ")
+    endforeach()
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_DEPENDS "${_dep_str}${_deb_sys_deps}")
 endforeach()
-set(CPACK_DEBIAN_CORE_LIB_PACKAGE_DEPENDS "${_deb_sys_deps}")
-set(CPACK_DEBIAN_CSV_LIB_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
-set(CPACK_DEBIAN_JSON_LIB_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
-set(CPACK_DEBIAN_CONVERT_LIB_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-json${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
 
-# Development packages (libscaffold-<name>-dev)
-foreach(_lib core csv json convert)
+# Development packages (libscaffold-<name>-dev): self-runtime + each direct
+# dep's -dev package. Transitive dev deps are pulled in via each direct dep's
+# own -dev package, so we don't walk the full closure here.
+foreach(_lib IN LISTS _scaffold_libs)
     string(TOUPPER "${_lib}_DEV" _comp)
     set(CPACK_DEBIAN_${_comp}_PACKAGE_NAME "libscaffold-${_lib}-dev")
     set(CPACK_DEBIAN_${_comp}_PACKAGE_SECTION "libdevel")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_LIBRARY_DEPS_${_lib})
+    set(_dep_str "libscaffold-${_lib}${_soversion} (= ${PROJECT_VERSION})")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str ", libscaffold-${_dep}-dev (= ${PROJECT_VERSION})")
+    endforeach()
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_DEPENDS "${_dep_str}")
 endforeach()
-set(CPACK_DEBIAN_CORE_DEV_PACKAGE_DEPENDS "libscaffold-core${_soversion} (= ${PROJECT_VERSION})")
-set(CPACK_DEBIAN_CSV_DEV_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-core-dev (= ${PROJECT_VERSION})")
-set(CPACK_DEBIAN_JSON_DEV_PACKAGE_DEPENDS "libscaffold-json${_soversion} (= ${PROJECT_VERSION}), libscaffold-core-dev (= ${PROJECT_VERSION})")
-set(CPACK_DEBIAN_CONVERT_DEV_PACKAGE_DEPENDS "libscaffold-convert${_soversion} (= ${PROJECT_VERSION}), libscaffold-csv-dev (= ${PROJECT_VERSION}), libscaffold-json-dev (= ${PROJECT_VERSION})")
 
-# CMake config umbrella package (libscaffold-dev)
+# CMake config umbrella package (libscaffold-dev) — depends on every -dev.
 set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_NAME "libscaffold-dev")
 set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_SECTION "libdevel")
-set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_DEPENDS
-    "libscaffold-core-dev (= ${PROJECT_VERSION}), libscaffold-csv-dev (= ${PROJECT_VERSION}), libscaffold-json-dev (= ${PROJECT_VERSION}), libscaffold-convert-dev (= ${PROJECT_VERSION})")
+set(_umbrella_deps "")
+foreach(_lib IN LISTS _scaffold_libs)
+    if(_umbrella_deps)
+        string(APPEND _umbrella_deps ", ")
+    endif()
+    string(APPEND _umbrella_deps "libscaffold-${_lib}-dev (= ${PROJECT_VERSION})")
+endforeach()
+set(CPACK_DEBIAN_CMAKE_CONFIG_PACKAGE_DEPENDS "${_umbrella_deps}")
 
-# Binary packages
-set(CPACK_DEBIAN_CSV2JSON_BIN_PACKAGE_NAME "scaffold-csv2json")
-set(CPACK_DEBIAN_CSV2JSON_BIN_PACKAGE_DEPENDS "libscaffold-convert${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
-set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_NAME "scaffold-json2csv")
-set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= ${PROJECT_VERSION}), libscaffold-json${_soversion} (= ${PROJECT_VERSION}), ${_deb_sys_deps}")
+# Binary packages (scaffold-<name>) — depend on each linked library's runtime.
+foreach(_bin IN LISTS _scaffold_bins)
+    string(TOUPPER "${_bin}_BIN" _comp)
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_NAME "scaffold-${_bin}")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_BINARY_DEPS_${_bin})
+    set(_dep_str "")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str "libscaffold-${_dep}${_soversion} (= ${PROJECT_VERSION}), ")
+    endforeach()
+    set(CPACK_DEBIAN_${_comp}_PACKAGE_DEPENDS "${_dep_str}${_deb_sys_deps}")
+endforeach()
 
 # ---------- RPM package metadata ----------
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
@@ -110,36 +133,52 @@ set(CPACK_RPM_SPEC_MORE_DEFINE "\
 %define use_source_date_epoch_as_buildtime 1
 %define clamp_mtime_to_source_date_epoch 1")
 
-# Runtime library packages
-foreach(_lib core csv json convert)
+# Runtime library packages (libscaffold-<name>)
+foreach(_lib IN LISTS _scaffold_libs)
     string(TOUPPER "${_lib}_LIB" _comp)
     set(CPACK_RPM_${_comp}_PACKAGE_NAME "libscaffold-${_lib}")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_LIBRARY_DEPS_${_lib})
+    set(_dep_str "")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str "libscaffold-${_dep} = ${PROJECT_VERSION}, ")
+    endforeach()
+    set(CPACK_RPM_${_comp}_PACKAGE_REQUIRES "${_dep_str}${_rpm_sys_deps}")
 endforeach()
-set(CPACK_RPM_CORE_LIB_PACKAGE_REQUIRES "${_rpm_sys_deps}")
-set(CPACK_RPM_CSV_LIB_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
-set(CPACK_RPM_JSON_LIB_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
-set(CPACK_RPM_CONVERT_LIB_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-json = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
 
-# Development packages
-foreach(_lib core csv json convert)
+# Development packages (libscaffold-<name>-devel)
+foreach(_lib IN LISTS _scaffold_libs)
     string(TOUPPER "${_lib}_DEV" _comp)
     set(CPACK_RPM_${_comp}_PACKAGE_NAME "libscaffold-${_lib}-devel")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_LIBRARY_DEPS_${_lib})
+    set(_dep_str "libscaffold-${_lib} = ${PROJECT_VERSION}")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str ", libscaffold-${_dep}-devel = ${PROJECT_VERSION}")
+    endforeach()
+    set(CPACK_RPM_${_comp}_PACKAGE_REQUIRES "${_dep_str}")
 endforeach()
-set(CPACK_RPM_CORE_DEV_PACKAGE_REQUIRES "libscaffold-core = ${PROJECT_VERSION}")
-set(CPACK_RPM_CSV_DEV_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-core-devel = ${PROJECT_VERSION}")
-set(CPACK_RPM_JSON_DEV_PACKAGE_REQUIRES "libscaffold-json = ${PROJECT_VERSION}, libscaffold-core-devel = ${PROJECT_VERSION}")
-set(CPACK_RPM_CONVERT_DEV_PACKAGE_REQUIRES "libscaffold-convert = ${PROJECT_VERSION}, libscaffold-csv-devel = ${PROJECT_VERSION}, libscaffold-json-devel = ${PROJECT_VERSION}")
 
 # CMake config umbrella package
 set(CPACK_RPM_CMAKE_CONFIG_PACKAGE_NAME "libscaffold-devel")
-set(CPACK_RPM_CMAKE_CONFIG_PACKAGE_REQUIRES
-    "libscaffold-core-devel = ${PROJECT_VERSION}, libscaffold-csv-devel = ${PROJECT_VERSION}, libscaffold-json-devel = ${PROJECT_VERSION}, libscaffold-convert-devel = ${PROJECT_VERSION}")
+set(_umbrella_deps "")
+foreach(_lib IN LISTS _scaffold_libs)
+    if(_umbrella_deps)
+        string(APPEND _umbrella_deps ", ")
+    endif()
+    string(APPEND _umbrella_deps "libscaffold-${_lib}-devel = ${PROJECT_VERSION}")
+endforeach()
+set(CPACK_RPM_CMAKE_CONFIG_PACKAGE_REQUIRES "${_umbrella_deps}")
 
 # Binary packages
-set(CPACK_RPM_CSV2JSON_BIN_PACKAGE_NAME "scaffold-csv2json")
-set(CPACK_RPM_CSV2JSON_BIN_PACKAGE_REQUIRES "libscaffold-convert = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
-set(CPACK_RPM_JSON2CSV_BIN_PACKAGE_NAME "scaffold-json2csv")
-set(CPACK_RPM_JSON2CSV_BIN_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION}, libscaffold-json = ${PROJECT_VERSION}, ${_rpm_sys_deps}")
+foreach(_bin IN LISTS _scaffold_bins)
+    string(TOUPPER "${_bin}_BIN" _comp)
+    set(CPACK_RPM_${_comp}_PACKAGE_NAME "scaffold-${_bin}")
+    get_property(_deps GLOBAL PROPERTY SCAFFOLD_BINARY_DEPS_${_bin})
+    set(_dep_str "")
+    foreach(_dep IN LISTS _deps)
+        string(APPEND _dep_str "libscaffold-${_dep} = ${PROJECT_VERSION}, ")
+    endforeach()
+    set(CPACK_RPM_${_comp}_PACKAGE_REQUIRES "${_dep_str}${_rpm_sys_deps}")
+endforeach()
 
 # ---------- Source package ----------
 set(CPACK_SOURCE_GENERATOR "TGZ")

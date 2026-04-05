@@ -15,6 +15,10 @@ write_basic_package_version_file(
 )
 
 # ---------- Package config from template ----------
+# SCAFFOLD_KNOWN_COMPONENTS is populated by scaffold_add_library() via a global
+# property — see cmake/ScaffoldLibrary.cmake. This keeps the component list in
+# lockstep with what's actually built.
+get_property(SCAFFOLD_KNOWN_COMPONENTS GLOBAL PROPERTY SCAFFOLD_LIBRARIES)
 configure_package_config_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/scaffold-config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/scaffold-config.cmake
