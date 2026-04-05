@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Set SOURCE_DATE_EPOCH
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
-      - uses: PromyLOPh/guix-install-action@549ca7f9216f2d97f8ae2b5edda9dba4a006e6e8  # v1.0
+      - uses: PromyLOPh/guix-install-action@40615e98e5c16a451aec10fe01c214ed07cbaa77  # v1.6
       # Skip `just check` — Guix's clang-tools version is incompatible with
       # GCC 15's libstdc++ C++26 macros (_GLIBCXX26_CONSTEXPR etc.), which
       # breaks `just lint`. Lint already runs on Debian as a dedicated job.
