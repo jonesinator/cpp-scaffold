@@ -631,10 +631,13 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False \
             reprotest disorderfs libfaketime diffoscope \
             gcc-c++ cmake ninja-build mold rpm-build bash tzdata \
-            procps-ng util-linux hostname
+            procps-ng util-linux hostname \
+            xxd python3-rpm
           # procps-ng (nproc), util-linux (unshare/taskset/setarch),
           # hostname (hostname/domainname) are part of Debian's base
           # but not the fedora:latest slim image.
+          # xxd + python3-rpm give diffoscope richer output when comparing
+          # RPMs (structured field diff instead of raw binary hexlify).
 
       - name: Run reprotest
         # shell: bash forces GitHub Actions to invoke with `-o pipefail`.

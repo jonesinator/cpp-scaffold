@@ -90,6 +90,11 @@ set(CPACK_DEBIAN_JSON2CSV_BIN_PACKAGE_DEPENDS "libscaffold-csv${_soversion} (= $
 # ---------- RPM package metadata ----------
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries")
+# Pin the RPMTAG_BUILDHOST header field to a fixed value. Without this,
+# rpmbuild records the build machine's hostname, which differs between
+# reproducibility runs (reprotest's domain_host variation changes it via
+# unshare --uts) and makes every .rpm hash non-deterministic.
+set(CPACK_RPM_PACKAGE_BUILD_HOST "reproducible")
 
 # Runtime library packages
 foreach(_lib core csv json convert)
