@@ -105,7 +105,7 @@ Release builds are deterministic given the same toolchain:
 - `CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS` + a post-install `ALL_COMPONENTS` chmod force 0755 on every staged directory, so packaging is independent of the build's umask
 - Stripped release binaries contain no debug symbols or local path information
 
-**Verification:** `just verify-reproducibility` (or [`scripts/verify-reproducibility.sh`](scripts/verify-reproducibility.sh)) double-builds with a perturbed environment (source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, parallelism) and SHA-256-compares every artifact. The [`reproducibility` CI job](.github/workflows/ci.yml) runs this on every push, covering binaries, shared/static libraries, the source TGZ, and all 12 per-component DEBs; on mismatch it uploads `diffoscope` HTML reports as an artifact.
+**Verification:** `just verify-reproducibility` (or [`scripts/verify-reproducibility.sh`](scripts/verify-reproducibility.sh)) wraps Debian's [`reprotest`](https://salsa.debian.org/reproducible-builds/reprotest). It stages a clean source tree, runs the build twice under systematically perturbed environments (`build_path`, `environment`, `exec_path`, `fileordering` via disorderfs, `home`, `locales`, `time`, `timezone`, `umask`, and `domain_host`/hostname where available), and diffs every artifact with `diffoscope`. Covers binaries, shared/static libraries, the TGZ, and all 12 per-component DEBs. The [`reproducibility` CI job](.github/workflows/ci.yml) runs this against `trixie-slim` on every push. See [CLAUDE.md § Reproducible Builds](CLAUDE.md) for the list of variations intentionally left off.
 
 ### Development Environments
 

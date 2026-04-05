@@ -13,3 +13,4 @@ Reusable CMake modules included by the root `CMakeLists.txt`.
 | [Install.cmake](Install.cmake) | Installs version header, generates CMake package config via `CMakePackageConfigHelpers`, exports the `scaffoldTargets` export set, and normalizes staged directory permissions to 0755 via `install(CODE ... ALL_COMPONENTS)` for umask-independent packaging |
 | [scaffold-config.cmake.in](scaffold-config.cmake.in) | Package config template enabling `find_package(scaffold COMPONENTS core)` with component validation |
 | [Packaging.cmake](Packaging.cmake) | CPack configuration for TGZ, DEB, and RPM generators with distribution-specific metadata |
+| [SortTarballs.cmake](SortTarballs.cmake) | CPack post-build script that re-archives each `.tar.gz` with `tar --sort=name --owner=0 --group=0 \| gzip -n` so TGZ entry order is invariant to filesystem readdir order and the packaging user |

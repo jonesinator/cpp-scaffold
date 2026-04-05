@@ -593,32 +593,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - name: Install toolchain + diffoscope
+      - name: Install reprotest + toolchain
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
-            g++ cmake ninja-build mold dpkg-dev diffoscope-minimal bash tzdata
-          # tzdata lets build B's TZ=Asia/Tokyo actually take effect;
-          # C.UTF-8 is built into glibc so no locale-gen is needed.
+            reprotest disorderfs faketime \
+            g++ cmake ninja-build mold dpkg-dev bash tzdata
+          # reprotest pulls in diffoscope + disorderfs transitively on
+          # Debian but we list the key variation-providers explicitly so
+          # missing deps fail here, not deep inside reprotest.
 
-      - name: Run double-build verification
-        run: bash scripts/verify-reproducibility.sh /tmp/scaffold-repro
+      - name: Run reprotest
+        run: bash scripts/verify-reproducibility.sh 2>&1 | tee /tmp/reprotest-log.txt
 
-      - name: Upload diffoscope report (on failure)
+      - name: Save reprotest stdout (on failure)
         if: failure()
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
-          name: reproducibility-diffoscope-report
-          path: /tmp/scaffold-repro/report/
-          if-no-files-found: ignore
-
-      - name: Upload sha256 sums
-        if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
-        with:
-          name: reproducibility-sums
-          path: |
-            /tmp/scaffold-repro/a.sums
-            /tmp/scaffold-repro/b.sums
+          name: reproducibility-diff
+          path: /tmp/reprotest-log.txt
           if-no-files-found: ignore
 
   cve-scan:

@@ -123,7 +123,7 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 - **`package` matrix** (4 distros × 4 profiles = 16 jobs): produces per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) plus monolithic TGZ.
 - **`install-test` matrix** (7 jobs): verifies `apt install`/`dnf install`/`pacman -U`/`apk add`/TGZ extraction resolves dependencies correctly, runs the installed binary, and builds a `find_package` consumer project.
 - **`static-binaries`** produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries on Alpine; smoke-tested on alpine/debian/fedora/arch plus busybox (via `docker run`).
-- **`reproducibility`** double-builds trixie/release under a perturbed environment (varied source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, parallelism) and verifies SHA-256 sums match across both builds. Covers raw binaries, shared/static libs, TGZ, and all per-component DEBs. On failure, uploads `diffoscope` HTML reports as the `reproducibility-diffoscope-report` artifact.
+- **`reproducibility`** runs `reprotest` on trixie/release with the default-enabled variations (`build_path`, `environment`, `exec_path`, `fileordering` via disorderfs, `home`, `locales`, `time`, `timezone`, `umask`, `domain_host`). Covers raw binaries, shared/static libs, TGZ, and all per-component DEBs. See the Reproducible Builds section below for which variations are skipped and why. On failure, uploads reprotest's stdout (including the `diffoscope` output) as the `reproducibility-diff` artifact.
 
 For local CI container builds, use `just ci-build <distro>` — runs `just check` inside a container matching that distro.
 
@@ -146,7 +146,7 @@ json2csv → csv  → core
 
 **`libs/test_support/`**: Header-only INTERFACE library providing `subprocess::run()` for launching child processes with arbitrary args/env and capturing stdout, stderr, and exit code.
 
-**`cmake/`**: Reusable modules — `Ccache.cmake` (auto-detects ccache), `Coverage.cmake` (lcov targets), `Sanitizers.cmake` (ASan/UBSan/TSan), `Hardening.cmake` (Release-only OpenSSF hardening flags: `_FORTIFY_SOURCE=3`, stack-protector-strong, stack-clash-protection, CET, full RELRO, BIND_NOW, noexecstack, separate-code, PIE; toggle via `ENABLE_HARDENING`), `Version.cmake` (generates `scaffold/version.hpp` from project version), `Install.cmake` (CMake package config and export set), `Packaging.cmake` (CPack for TGZ/DEB/RPM), `scaffold-config.cmake.in` (package config template with COMPONENTS support).
+**`cmake/`**: Reusable modules — `Ccache.cmake` (auto-detects ccache), `Coverage.cmake` (lcov targets), `Sanitizers.cmake` (ASan/UBSan/TSan), `Hardening.cmake` (Release-only OpenSSF hardening flags: `_FORTIFY_SOURCE=3`, stack-protector-strong, stack-clash-protection, CET, full RELRO, BIND_NOW, noexecstack, separate-code, PIE; toggle via `ENABLE_HARDENING`), `Version.cmake` (generates `scaffold/version.hpp` from project version), `Install.cmake` (CMake package config and export set), `Packaging.cmake` (CPack for TGZ/DEB/RPM), `SortTarballs.cmake` (post-build CPack script that normalizes TGZ entry order and owner for reproducibility), `scaffold-config.cmake.in` (package config template with COMPONENTS support).
 
 ## Compiler and Linker Settings
 
@@ -166,15 +166,25 @@ Release builds are deterministic given the same toolchain. For full reproducibil
 SOURCE_DATE_EPOCH=0 just build release
 ```
 
-**Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) does a double-build with a perturbed environment (different source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, and parallelism) and SHA-256-compares the outputs. If any artifact diverges and `diffoscope` is installed, per-artifact HTML reports are written to `$WORKDIR/report/`. Set `CPACK_GENERATORS="TGZ;DEB"` to also verify Debian packages (requires `dpkg-dev`). CI runs this job in `.github/workflows/ci.yml` against `trixie-slim` + `TGZ;DEB`.
+**Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) wraps Debian's [`reprotest`](https://salsa.debian.org/reproducible-builds/reprotest) — it stages a clean source tree to `/tmp`, runs the build twice under systematically perturbed environments, and diffs every artifact (binaries, shared/static libs, TGZ, DEBs) via `diffoscope`. Install with `pacman -S reprotest disorderfs` (Arch), `apt install reprotest disorderfs` (Debian/Ubuntu), or `dnf install reprotest disorderfs` (Fedora). The `reproducibility` CI job runs the same script against `trixie-slim` + `TGZ;DEB`.
 
-**Reproducibility-relevant CMake settings** (root `CMakeLists.txt`):
+**Variations enabled by default** (in `scripts/verify-reproducibility.sh`): `build_path`, `environment`, `exec_path`, `fileordering` (via disorderfs), `home`, `locales`, `time` (faketime), `timezone`, `umask`, plus `domain_host` (hostname/domainname) *if* the `domainname` binary is available. Override via `REPROTEST_VARIATIONS`.
+
+**Variations disabled by default** (and why — to enable, pass `REPROTEST_VARIATIONS='-all,+<wanted>'`):
+- `kernel` — needs a different host kernel; impractical in CI
+- `aslr` — only affects runtime address layout, not build artifacts
+- `num_cpus` — interacts flakily with disorderfs in our testing; the project is too small for parallel-link races to matter in practice
+- `user_group` — reprotest silently no-ops this without pre-configured extra user accounts (needs `--variations='user_group.available+=user:group'`); turn on once we actually provision such users
+- `domain_host` (on Arch only) — needs the `domainname` binary, which Arch ships only via AUR (`nis`/`yp-tools`); automatically enabled on Debian/Fedora where the `hostname` package provides it
+
+**Reproducibility-relevant CMake settings** (root `CMakeLists.txt` and `cmake/`):
 - `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
 - `-Wl,--build-id=sha256` makes the build-ID content-addressed (not timestamp-based)
 - `CMAKE_BUILD_RPATH_USE_ORIGIN=ON` rewrites build-tree `DT_RUNPATH` to `$ORIGIN`-relative so the source directory doesn't leak into ELF binaries
 - `CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS=0755` pins directory modes created by `install(DIRECTORY)` regardless of umask
-- A post-install `install(CODE ... ALL_COMPONENTS)` in `cmake/Install.cmake` walks the staging tree and chmods every directory to 0755 (covers implicit parents that the DEFAULT_DIRECTORY_PERMISSIONS setting doesn't reach, and runs for every CPack per-component install, not just "Unspecified")
-- For DEB packaging specifically, callers must invoke `cpack` with `umask 022` (the standard Debian packaging umask) — `dpkg-deb` records the calling process's umask into `ar`-archive member modes and the packaging prefix directory's mode. The verify script and CI job both set `umask 022` around the `cpack` invocation.
+- A post-install `install(CODE ... ALL_COMPONENTS)` in `cmake/Install.cmake` walks the staging tree and chmods every directory to 0755 (covers implicit parents and runs for every CPack per-component install, not just "Unspecified")
+- `CPACK_POST_BUILD_SCRIPTS=cmake/SortTarballs.cmake` re-archives each CPack `.tar.gz` with `--sort=name --owner=0 --group=0 gzip -n` so the TGZ is invariant to filesystem readdir order and the packaging user's identity
+- For DEB packaging, callers must invoke `cpack` with `umask 022` (the standard Debian packaging umask) — `dpkg-deb` records the calling process's umask into `ar`-archive member modes. The verify script and CI job both set `umask 022` around the `cpack` invocation.
 
 ## Adding a New Library
 

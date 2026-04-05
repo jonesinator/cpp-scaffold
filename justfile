@@ -98,9 +98,9 @@ install-to prefix profile="release": (build profile)
 package profile="release": (build profile)
     cd build/{{profile}} && cpack
 
-# Verify release artifacts reproduce byte-for-byte under a perturbed build env
-verify-reproducibility workdir="/tmp/scaffold-repro":
-    scripts/verify-reproducibility.sh {{workdir}}
+# Verify release artifacts reproduce byte-for-byte (via Debian reprotest)
+verify-reproducibility:
+    scripts/verify-reproducibility.sh
 
 # Full check: build all profiles, test, coverage, sanitizers, lint, format, docs, deps
 check:

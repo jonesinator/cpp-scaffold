@@ -126,4 +126,11 @@ set(CPACK_RPM_JSON2CSV_BIN_PACKAGE_REQUIRES "libscaffold-csv = ${PROJECT_VERSION
 set(CPACK_SOURCE_GENERATOR "TGZ")
 set(CPACK_SOURCE_IGNORE_FILES "/build/" "/[.]git/" "[.]gitignore")
 
+# ---------- Reproducibility: normalize .tar.gz entry order + owner ----------
+# CPack's TGZ generator walks the staging tree via readdir(), which gives
+# filesystem-dependent entry ordering (ext4 vs btrfs vs disorderfs mount
+# all produce different orderings). Re-archive each .tar.gz with
+# --sort=name, --owner=0, --group=0 after CPack runs.
+set(CPACK_POST_BUILD_SCRIPTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SortTarballs.cmake")
+
 include(CPack)
