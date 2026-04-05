@@ -54,6 +54,12 @@
                 "CMAKE_BUILD_TYPE": "Debug",
                 "ENABLE_TSAN": "ON"
             }
+        },
+        {
+            "name": "static",
+            "inherits": "release",
+            "displayName": "Static (musl)",
+            "cacheVariables": { "SCAFFOLD_STATIC_BINARIES": "ON" }
         }
     ],
     "buildPresets": [
@@ -61,13 +67,15 @@
         { "name": "release",  "configurePreset": "release",  "jobs": 0 },
         { "name": "coverage", "configurePreset": "coverage", "jobs": 0 },
         { "name": "asan",     "configurePreset": "asan",     "jobs": 0 },
-        { "name": "tsan",     "configurePreset": "tsan",     "jobs": 0 }
+        { "name": "tsan",     "configurePreset": "tsan",     "jobs": 0 },
+        { "name": "static",   "configurePreset": "static",   "jobs": 0 }
     ],
     "testPresets": [
         { "name": "debug",    "configurePreset": "debug",    "output": { "outputOnFailure": true } },
         { "name": "release",  "configurePreset": "release",  "output": { "outputOnFailure": true } },
         { "name": "coverage", "configurePreset": "coverage", "output": { "outputOnFailure": true } },
         { "name": "asan",     "configurePreset": "asan",     "output": { "outputOnFailure": true } },
-        { "name": "tsan",     "configurePreset": "tsan",     "output": { "outputOnFailure": true } }
+        { "name": "tsan",     "configurePreset": "tsan",     "output": { "outputOnFailure": true } },
+        { "name": "static",   "configurePreset": "static",   "output": { "outputOnFailure": true } }
     ]
 }

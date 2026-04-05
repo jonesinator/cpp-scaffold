@@ -50,6 +50,9 @@ option(ENABLE_ASAN "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OF
 option(ENABLE_TSAN "Build with ThreadSanitizer" OFF)
 include(cmake/Sanitizers.cmake)
 
+# ---------- Static binaries (opt-in, musl + libstdc++ fully static) ----------
+option(SCAFFOLD_STATIC_BINARIES "Statically link scaffold binaries (musl + libstdc++)" OFF)
+
 # ---------- Shared library support ----------
 # We always build both shared and static variants of each library (see
 # libs/*/CMakeLists.txt). Visibility hiding is needed for proper shared library

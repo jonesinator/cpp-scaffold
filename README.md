@@ -71,6 +71,8 @@ Each profile produces 11 packages per distro. Packaging formats:
 
 `find_package(scaffold COMPONENTS core csv json convert)` links against `scaffold::<name>` (shared) or `scaffold::<name>_static`.
 
+**Static binaries:** for download-and-run usage, the `static` CMake preset builds fully musl-linked binaries (`csv2json-x86_64`, `json2csv-x86_64`) that run on any Linux distribution regardless of libc. Built on Alpine; smoke-tested against Alpine, Debian, Fedora, Arch, and busybox in CI.
+
 ### Reproducible Builds
 
 Release builds are deterministic given the same toolchain:

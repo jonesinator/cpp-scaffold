@@ -93,6 +93,8 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 
 **Per-component packaging:** All distributions (DEB, RPM, APK, pkg.tar.zst) are split into per-component packages following Debian convention: `libscaffold-<lib>` (runtime), `libscaffold-<lib>-dev` (headers + static + symlink), plus `scaffold-csv2json`/`scaffold-json2csv` (binaries) and `libscaffold-dev` (umbrella dev package with CMake config). Each profile produces 11 packages per distro.
 
+**Static binaries:** The `static` CMake preset (`just build static`) enables `SCAFFOLD_STATIC_BINARIES=ON` which links binaries against the `*_static` library targets and adds `-static` link flag. Built on Alpine it produces musl-static binaries (~1.4 MB each) that run on any Linux distro without runtime deps. CI uploads them as `scaffold-csv2json-static-x86_64` / `scaffold-json2csv-static-x86_64` artifacts.
+
 **Package definitions:**
 - CPack (TGZ/DEB/RPM): configured in `cmake/Packaging.cmake`
 - Nix: `packages.default` output in `flake.nix`

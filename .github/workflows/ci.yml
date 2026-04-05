@@ -102,6 +102,65 @@ jobs:
             build/coverage/coverage
             build/coverage/coverage.info
 
+  static-binaries:
+    name: Static Binaries (x86_64)
+    runs-on: ubuntu-latest
+    container: alpine:edge
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install toolchain
+        run: apk add --no-cache g++ cmake samurai mold ccache
+      - name: Build static
+        run: |
+          cmake --preset static
+          cmake --build --preset static
+      - name: Strip + rename
+        run: |
+          mkdir -p static-out
+          strip build/static/bin/csv2json/csv2json -o static-out/csv2json-x86_64
+          strip build/static/bin/json2csv/json2csv -o static-out/json2csv-x86_64
+          ls -lh static-out/
+      - name: Upload csv2json
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-csv2json-static-x86_64
+          path: static-out/csv2json-x86_64
+      - name: Upload json2csv
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-json2csv-static-x86_64
+          path: static-out/json2csv-x86_64
+
+  static-binaries-smoke-test:
+    name: Static Binary Smoke Test (${{ matrix.target }})
+    needs: static-binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: alpine
+            container: alpine:edge
+          - target: debian
+            container: debian:trixie-slim
+          - target: fedora
+            container: fedora:latest
+          - target: arch
+            container: archlinux:latest
+          - target: busybox
+            container: busybox:latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: scaffold-csv2json-static-x86_64
+          path: /tmp
+      - name: Run static binary
+        run: |
+          chmod +x /tmp/csv2json-x86_64
+          actual=$(/tmp/csv2json-x86_64)
+          expected=$(printf 'csv\njson')
+          test "$actual" = "$expected"
+
   test:
     name: Test (${{ matrix.distro }}, ${{ matrix.profile }})
     runs-on: ubuntu-latest
