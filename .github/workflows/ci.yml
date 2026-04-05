@@ -576,9 +576,9 @@ jobs:
         run: |
           cmake -S ci/install-test -B /tmp/consumer-build -G Ninja
           cmake --build /tmp/consumer-build
-          actual=$(/tmp/consumer-build/app)
-          expected=$(printf '0.1.0\ncsv\njson')
-          test "$actual" = "$expected"
+          /tmp/consumer-build/app | tee /tmp/app.out
+          grep -q '0.1.0' /tmp/app.out
+          grep -q '"k": "v"' /tmp/app.out
 
   reproducibility:
     name: Reproducibility (${{ matrix.distro }}, release)

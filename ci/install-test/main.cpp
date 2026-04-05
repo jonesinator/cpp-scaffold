@@ -6,5 +6,5 @@
 int main()
 {
     core::println(SCAFFOLD_VERSION);
-    convert::greet_both();
+    core::println(convert::csv_to_json("k\nv\n"));
 }
