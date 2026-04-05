@@ -5,4 +5,4 @@ Header-only INTERFACE library providing subprocess utilities for integration tes
 | Path | Description |
 |---|---|
 | [CMakeLists.txt](CMakeLists.txt) | Build definition — INTERFACE library exposing include path |
-| [include/test_support/subprocess.hpp](include/test_support/subprocess.hpp) | `subprocess::run()` — launches a child process with arbitrary args/env, captures stdout, stderr, and exit code |
+| [include/test_support/subprocess.hpp](include/test_support/subprocess.hpp) | `subprocess::run()` — launches a child process with arbitrary args/env, optionally pipes data to its stdin, and captures stdout, stderr, and exit code |

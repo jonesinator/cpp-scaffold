@@ -1,9 +1,9 @@
 add_executable(json2csv main.cpp)
 if(SCAFFOLD_STATIC_BINARIES)
-    target_link_libraries(json2csv PRIVATE csv_static json_static)
+    target_link_libraries(json2csv PRIVATE convert_static)
     target_link_options(json2csv PRIVATE -static)
 else()
-    target_link_libraries(json2csv PRIVATE csv json)
+    target_link_libraries(json2csv PRIVATE convert)
 endif()
 
 # ---------- Install ----------

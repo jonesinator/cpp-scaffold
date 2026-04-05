@@ -3,18 +3,36 @@
  * @file main.cpp
  * @brief Entry point for the json2csv binary.
  *
- * Demonstrates linking against both the csv and json libraries.
+ * Reads a JSON array of objects from stdin, writes RFC-4180 CSV to stdout.
+ * Uses the convert library, which transitively depends on csv, json, and core.
  */
 
-#include "csv/csv.hpp"
+#include "convert/convert.hpp"
 
-#include "json/json.hpp"
+#include <cstdlib>
+#include <exception>
+#include <iostream>
+#include <print>
+#include <sstream>
 
 /**
- * @brief Call greet() from both csv and json, then exit.
+ * @brief Read stdin to EOF, convert JSON to CSV, write to stdout.
+ * @return EXIT_SUCCESS on success, EXIT_FAILURE with a stderr message on error.
  */
 auto main() -> int
 {
-    csv::greet();
-    json::greet();
+    try
+    {
+        std::ostringstream buf{};
+        buf << std::cin.rdbuf();
+        std::cout << convert::json_to_csv(buf.str());
+        return EXIT_SUCCESS;
+    }
+    catch (const std::exception& e)
+    {
+        // LCOV_EXCL_START
+        std::println(std::cerr, "json2csv: {}", e.what());
+        return EXIT_FAILURE;
+        // LCOV_EXCL_STOP
+    }
 }

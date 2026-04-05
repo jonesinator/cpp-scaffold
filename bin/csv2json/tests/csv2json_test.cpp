@@ -9,6 +9,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <print>
+#include <string>
 
 /// Path to the csv2json binary, injected by CMake.
 #ifndef CSV2JSON_EXECUTABLE
@@ -16,25 +17,39 @@
 #endif
 
 /**
- * @brief Verify that csv2json prints "csv\njson\n" and exits 0.
+ * @brief Pipe sample CSV into csv2json and verify its JSON output.
  * @return EXIT_SUCCESS on pass, EXIT_FAILURE on fail.
  */
 auto main() -> int
 {
-    auto result = subprocess::run(CSV2JSON_EXECUTABLE);
+    const std::string csv_in = "name,city\n"
+                               "Ada,\"London, UK\"\n"
+                               "Grace,New York\n";
+    const std::string expected = "[\n"
+                                 "  {\n"
+                                 "    \"name\": \"Ada\",\n"
+                                 "    \"city\": \"London, UK\"\n"
+                                 "  },\n"
+                                 "  {\n"
+                                 "    \"name\": \"Grace\",\n"
+                                 "    \"city\": \"New York\"\n"
+                                 "  }\n"
+                                 "]\n";
+
+    const auto result = subprocess::run(CSV2JSON_EXECUTABLE, {}, {}, csv_in);
 
     if (result.exit_code != 0)
     {
         // LCOV_EXCL_START
-        std::cerr << "FAIL: csv2json exited with code " << result.exit_code << "\n";
+        std::println(std::cerr, "FAIL: csv2json exited with code {} (stderr: {})", result.exit_code, result.err);
         return EXIT_FAILURE;
         // LCOV_EXCL_STOP
     }
 
-    if (result.out != "csv\njson\n")
+    if (result.out != expected)
     {
         // LCOV_EXCL_START
-        std::cerr << R"(FAIL: expected "csv\njson\n", got ")" << result.out << "\"\n";
+        std::println(std::cerr, "FAIL: expected:\n{}\ngot:\n{}", expected, result.out);
         return EXIT_FAILURE;
         // LCOV_EXCL_STOP
     }

@@ -139,8 +139,8 @@ For local CI container builds, use `just ci-build <distro>` — runs `just check
 csv2json → convert → csv  → core
                      json → core
 
-json2csv → csv  → core
-           json → core
+json2csv → convert → csv  → core
+                     json → core
 ```
 
 **Binaries** (`bin/<name>/`): Each links against libraries via `target_link_libraries(... PRIVATE ...)`. Binary integration tests use `libs/test_support/subprocess.hpp` to spawn the built binary and assert on its output.

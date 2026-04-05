@@ -6,7 +6,7 @@ A modern C++26 project scaffold with multi-library architecture, comprehensive t
 
 This repository is a fully functional project template — not a library or application. It demonstrates and validates a complete C++ development workflow: building, testing, static analysis, code coverage, documentation generation, reproducible builds, packaging, and continuous integration across multiple Linux distributions.
 
-The example code (libraries `core`, `csv`, `json`, `convert` and binaries `csv2json`, `json2csv`) exists solely to exercise every part of the build infrastructure. Replace it with your own code; the scaffolding around it is the point.
+The example code (libraries `core`, `csv`, `json`, `convert` and binaries `csv2json`, `json2csv`) is a minimal but functional CSV↔JSON converter: the CSV library parses/writes RFC-4180 text, the JSON library parses/writes string-valued arrays of objects, and both converge on a shared `core::Table` type. It exists to exercise every part of the build infrastructure; replace it with your own code — the scaffolding around it is the point.
 
 ## Features
 
@@ -165,12 +165,12 @@ Profiles: `debug` (default), `release`, `coverage`, `asan`, `tsan`, `clang-debug
 ## Architecture
 
 ```
-libs/core       ← foundation (no dependencies)
+libs/core       ← foundation (no dependencies); defines core::Table
 libs/csv        ← depends on core
 libs/json       ← depends on core
 libs/convert    ← depends on csv + json (diamond on core)
 bin/csv2json    ← links convert (transitively: csv, json, core)
-bin/json2csv    ← links csv + json directly
+bin/json2csv    ← links convert (transitively: csv, json, core)
 ```
 
 Libraries expose public headers via `include/<name>/` and use CMake-generated export macros (`<NAME>_EXPORT`) for shared library support. Binary integration tests use `libs/test_support/` to spawn the compiled executable and assert on its behavior.
