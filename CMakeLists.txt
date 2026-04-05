@@ -45,6 +45,14 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     )
 endif()
 
+# ---------- Static binaries (opt-in, musl + libstdc++ fully static) ----------
+# Declared early because Hardening.cmake consults it to decide whether to
+# enable PIE.
+option(SCAFFOLD_STATIC_BINARIES "Statically link scaffold binaries (musl + libstdc++)" OFF)
+
+# ---------- Hardening (Release-only) ----------
+include(cmake/Hardening.cmake)
+
 # ---------- Coverage (opt-in) ----------
 option(ENABLE_COVERAGE "Build with code-coverage instrumentation" OFF)
 include(cmake/Coverage.cmake)
@@ -53,9 +61,6 @@ include(cmake/Coverage.cmake)
 option(ENABLE_ASAN "Build with AddressSanitizer + UndefinedBehaviorSanitizer" OFF)
 option(ENABLE_TSAN "Build with ThreadSanitizer" OFF)
 include(cmake/Sanitizers.cmake)
-
-# ---------- Static binaries (opt-in, musl + libstdc++ fully static) ----------
-option(SCAFFOLD_STATIC_BINARIES "Statically link scaffold binaries (musl + libstdc++)" OFF)
 
 # ---------- Shared library support ----------
 # We always build both shared and static variants of each library (see

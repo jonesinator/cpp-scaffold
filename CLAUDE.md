@@ -145,7 +145,7 @@ json2csv → csv  → core
 
 **`libs/test_support/`**: Header-only INTERFACE library providing `subprocess::run()` for launching child processes with arbitrary args/env and capturing stdout, stderr, and exit code.
 
-**`cmake/`**: Reusable modules — `Ccache.cmake` (auto-detects ccache), `Coverage.cmake` (lcov targets), `Sanitizers.cmake` (ASan/UBSan/TSan), `Version.cmake` (generates `scaffold/version.hpp` from project version), `Install.cmake` (CMake package config and export set), `Packaging.cmake` (CPack for TGZ/DEB/RPM), `scaffold-config.cmake.in` (package config template with COMPONENTS support).
+**`cmake/`**: Reusable modules — `Ccache.cmake` (auto-detects ccache), `Coverage.cmake` (lcov targets), `Sanitizers.cmake` (ASan/UBSan/TSan), `Hardening.cmake` (Release-only OpenSSF hardening flags: `_FORTIFY_SOURCE=3`, stack-protector-strong, stack-clash-protection, CET, full RELRO, BIND_NOW, noexecstack, separate-code, PIE; toggle via `ENABLE_HARDENING`), `Version.cmake` (generates `scaffold/version.hpp` from project version), `Install.cmake` (CMake package config and export set), `Packaging.cmake` (CPack for TGZ/DEB/RPM), `scaffold-config.cmake.in` (package config template with COMPONENTS support).
 
 ## Compiler and Linker Settings
 
