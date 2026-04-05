@@ -585,12 +585,16 @@ jobs:
   reproducibility:
     name: Reproducibility (trixie, release)
     runs-on: ubuntu-24.04
-    # `seccomp=unconfined` lets reprotest's `setarch` wrapper call the
-    # personality(2) syscall without EPERM. The build itself doesn't need
-    # the relaxed profile — this is purely for reprotest's instrumentation.
+    # Container options needed for reprotest's instrumentation:
+    #   seccomp=unconfined  — setarch uses personality(2), blocked by default
+    #   --cap-add SYS_ADMIN — disorderfs (FUSE) requires CAP_SYS_ADMIN to
+    #                         mount in a container
+    #   --device /dev/fuse  — disorderfs needs access to the fuse device
+    # None of this affects the build itself; it's all for the
+    # fileordering/hostname perturbations reprotest applies around it.
     container:
       image: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
-      options: --security-opt seccomp=unconfined
+      options: --security-opt seccomp=unconfined --cap-add SYS_ADMIN --device /dev/fuse
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}

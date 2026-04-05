@@ -176,7 +176,9 @@ SOURCE_DATE_EPOCH=0 just build release
 - `user_group` — reprotest silently no-ops this without pre-configured extra user accounts (needs `--variations='user_group.available+=user:group'`); turn on once we actually provision such users
 - `domain_host` (on Arch only) — needs the `domainname` binary, which Arch ships only via AUR (`nis`/`yp-tools`); automatically enabled on Debian/Fedora where the `hostname` package provides it
 
-**Note on `+aslr`**: we keep `aslr` enabled (not disabled) even though it's irrelevant to build artifacts. Disabling aslr makes reprotest append `-R` to its `setarch` wrapper, which calls `personality(2)` — blocked by Docker's default seccomp profile. Enabling aslr means reprotest leaves the personality syscall alone. The CI job also sets `options: --security-opt seccomp=unconfined` on the container as a belt-and-suspenders measure.
+**Note on `+aslr`**: we keep `aslr` enabled (not disabled) even though it's irrelevant to build artifacts. Disabling aslr makes reprotest append `-R` to its `setarch` wrapper, which calls `personality(2)` — blocked by Docker's default seccomp profile. Enabling aslr means reprotest leaves the personality syscall alone.
+
+**CI container privileges**: the `reproducibility` job runs in trixie-slim with `--security-opt seccomp=unconfined --cap-add SYS_ADMIN --device /dev/fuse`. These aren't for the *build* — they're for reprotest's instrumentation: `setarch` / `personality(2)` needs relaxed seccomp, and disorderfs (a FUSE filesystem used by the `fileordering` variation) needs CAP_SYS_ADMIN + `/dev/fuse` access to mount inside the container.
 
 **Reproducibility-relevant CMake settings** (root `CMakeLists.txt` and `cmake/`):
 - `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
