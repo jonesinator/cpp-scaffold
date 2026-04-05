@@ -60,22 +60,30 @@
             "inherits": "release",
             "displayName": "Static (musl)",
             "cacheVariables": { "SCAFFOLD_STATIC_BINARIES": "ON" }
+        },
+        {
+            "name": "clang-debug",
+            "inherits": "debug",
+            "displayName": "Clang Debug (portability canary)",
+            "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
         }
     ],
     "buildPresets": [
-        { "name": "debug",    "configurePreset": "debug",    "jobs": 0 },
-        { "name": "release",  "configurePreset": "release",  "jobs": 0 },
-        { "name": "coverage", "configurePreset": "coverage", "jobs": 0 },
-        { "name": "asan",     "configurePreset": "asan",     "jobs": 0 },
-        { "name": "tsan",     "configurePreset": "tsan",     "jobs": 0 },
-        { "name": "static",   "configurePreset": "static",   "jobs": 0 }
+        { "name": "debug",       "configurePreset": "debug",       "jobs": 0 },
+        { "name": "release",     "configurePreset": "release",     "jobs": 0 },
+        { "name": "coverage",    "configurePreset": "coverage",    "jobs": 0 },
+        { "name": "asan",        "configurePreset": "asan",        "jobs": 0 },
+        { "name": "tsan",        "configurePreset": "tsan",        "jobs": 0 },
+        { "name": "static",      "configurePreset": "static",      "jobs": 0 },
+        { "name": "clang-debug", "configurePreset": "clang-debug", "jobs": 0 }
     ],
     "testPresets": [
-        { "name": "debug",    "configurePreset": "debug",    "output": { "outputOnFailure": true } },
-        { "name": "release",  "configurePreset": "release",  "output": { "outputOnFailure": true } },
-        { "name": "coverage", "configurePreset": "coverage", "output": { "outputOnFailure": true } },
-        { "name": "asan",     "configurePreset": "asan",     "output": { "outputOnFailure": true } },
-        { "name": "tsan",     "configurePreset": "tsan",     "output": { "outputOnFailure": true } },
-        { "name": "static",   "configurePreset": "static",   "output": { "outputOnFailure": true } }
+        { "name": "debug",       "configurePreset": "debug",       "output": { "outputOnFailure": true } },
+        { "name": "release",     "configurePreset": "release",     "output": { "outputOnFailure": true } },
+        { "name": "coverage",    "configurePreset": "coverage",    "output": { "outputOnFailure": true } },
+        { "name": "asan",        "configurePreset": "asan",        "output": { "outputOnFailure": true } },
+        { "name": "tsan",        "configurePreset": "tsan",        "output": { "outputOnFailure": true } },
+        { "name": "static",      "configurePreset": "static",      "output": { "outputOnFailure": true } },
+        { "name": "clang-debug", "configurePreset": "clang-debug", "output": { "outputOnFailure": true } }
     ]
 }

@@ -13,7 +13,7 @@ GitHub Actions workflow definitions.
 |---|---|
 | `setup` | Computes `SOURCE_DATE_EPOCH` from the git commit timestamp; generates a source SBOM (via syft) + runner image metadata |
 | `nix` | `just check` + `nix build` + binary smoke-test |
-| `format-check`, `lint`, `docs`, `deps`, `coverage` | Single-run concerns (Debian trixie); `docs`/`deps`/`coverage` upload their outputs as artifacts |
+| `format-check`, `lint`, `docs`, `deps`, `coverage`, `clang-build` | Single-run concerns (Debian trixie); `docs`/`deps`/`coverage` upload their outputs as artifacts; `clang-build` is a non-gating clang portability canary |
 | `test` | 4 distros × 4 profiles = **16 jobs** running `just test <profile>` |
 | `package` | 4 distros × 4 profiles = **16 jobs** producing per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) + monolithic TGZ + syft SBOMs (per-package + build-environment) |
 | `install-test` | 4 distros × native+TGZ formats = 7 jobs verifying package install + `find_package` consumer |

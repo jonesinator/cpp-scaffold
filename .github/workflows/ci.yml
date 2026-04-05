@@ -86,6 +86,20 @@ jobs:
       - name: Run lint
         run: just lint
 
+  clang-build:
+    name: Clang build + test
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+    needs: setup
+    env:
+      SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - name: Install toolchain
+        run: apt-get update && apt-get install -y --no-install-recommends clang libstdc++-15-dev cmake ninja-build mold ccache just
+      - name: Build + test with clang
+        run: just test clang-debug
+
   docs:
     name: Docs
     runs-on: ubuntu-24.04

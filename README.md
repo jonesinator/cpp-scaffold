@@ -156,7 +156,7 @@ just open-deps              Generate + open dependency graph
 just clean                  Remove all build artifacts
 ```
 
-Profiles: `debug` (default), `release`, `coverage`, `asan`, `tsan`.
+Profiles: `debug` (default), `release`, `coverage`, `asan`, `tsan`, `clang-debug` (clang portability canary; CI-only).
 
 ## Architecture
 

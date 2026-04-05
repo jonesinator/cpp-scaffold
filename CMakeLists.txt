@@ -36,10 +36,14 @@ add_compile_options(
     -Wnull-dereference -Wdouble-promotion
     -Wformat=2 -Wimplicit-fallthrough
     -Wmisleading-indentation
-    -Wduplicated-cond -Wduplicated-branches
-    -Wlogical-op -Wuseless-cast
     -Wsuggest-override
 )
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(
+        -Wduplicated-cond -Wduplicated-branches
+        -Wlogical-op -Wuseless-cast
+    )
+endif()
 
 # ---------- Coverage (opt-in) ----------
 option(ENABLE_COVERAGE "Build with code-coverage instrumentation" OFF)

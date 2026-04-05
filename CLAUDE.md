@@ -32,7 +32,7 @@ just build asan         # AddressSanitizer + UBSan
 just build tsan         # ThreadSanitizer
 ```
 
-Profiles: `debug`, `release`, `coverage`, `asan`, `tsan`.
+Profiles: `debug`, `release`, `coverage`, `asan`, `tsan`, `clang-debug` (clang portability canary; libstdc++, CI-only).
 
 ## Testing
 
