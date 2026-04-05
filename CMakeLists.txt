@@ -13,6 +13,14 @@ set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 # ---------- Install paths ----------
 include(GNUInstallDirs)
+# Pin installed-directory permissions to 0755 so the build's umask does not
+# leak into the staging tree that CPack archives into TGZ/DEB/RPM. Without
+# this, running cpack under umask 027 yields 0750 directories and the
+# archive hashes differ from a default-umask build.
+set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE
+    GROUP_READ GROUP_EXECUTE
+    WORLD_READ WORLD_EXECUTE)
 
 # ---------- ccache ----------
 include(cmake/Ccache.cmake)
@@ -26,6 +34,12 @@ if(NOT ENABLE_COVERAGE)
     add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.)
 endif()
 add_link_options(-Wl,--build-id=sha256)
+# Rewrite build-tree RUNPATH entries to use $ORIGIN-relative paths so the
+# absolute source-tree location does not leak into the ELF. Without this,
+# two builds from different source directories produce diverging binaries
+# even though everything else is deterministic. Install-tree RPATHs are
+# controlled separately via CMAKE_INSTALL_RPATH and are unaffected.
+set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
 
 # ---------- Compiler warnings ----------
 add_compile_options(

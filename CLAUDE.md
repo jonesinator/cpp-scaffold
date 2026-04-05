@@ -123,6 +123,7 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 - **`package` matrix** (4 distros × 4 profiles = 16 jobs): produces per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) plus monolithic TGZ.
 - **`install-test` matrix** (7 jobs): verifies `apt install`/`dnf install`/`pacman -U`/`apk add`/TGZ extraction resolves dependencies correctly, runs the installed binary, and builds a `find_package` consumer project.
 - **`static-binaries`** produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries on Alpine; smoke-tested on alpine/debian/fedora/arch plus busybox (via `docker run`).
+- **`reproducibility`** double-builds trixie/release under a perturbed environment (varied source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, parallelism) and verifies SHA-256 sums match across both builds. Covers raw binaries, shared/static libs, TGZ, and all per-component DEBs. On failure, uploads `diffoscope` HTML reports as the `reproducibility-diffoscope-report` artifact.
 
 For local CI container builds, use `just ci-build <distro>` — runs `just check` inside a container matching that distro.
 
@@ -164,6 +165,16 @@ Release builds are deterministic given the same toolchain. For full reproducibil
 ```bash
 SOURCE_DATE_EPOCH=0 just build release
 ```
+
+**Verification:** `just verify-reproducibility` (or `scripts/verify-reproducibility.sh`) does a double-build with a perturbed environment (different source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, and parallelism) and SHA-256-compares the outputs. If any artifact diverges and `diffoscope` is installed, per-artifact HTML reports are written to `$WORKDIR/report/`. Set `CPACK_GENERATORS="TGZ;DEB"` to also verify Debian packages (requires `dpkg-dev`). CI runs this job in `.github/workflows/ci.yml` against `trixie-slim` + `TGZ;DEB`.
+
+**Reproducibility-relevant CMake settings** (root `CMakeLists.txt`):
+- `-ffile-prefix-map` remaps the absolute source path to `.` (disabled under coverage so lcov can resolve paths)
+- `-Wl,--build-id=sha256` makes the build-ID content-addressed (not timestamp-based)
+- `CMAKE_BUILD_RPATH_USE_ORIGIN=ON` rewrites build-tree `DT_RUNPATH` to `$ORIGIN`-relative so the source directory doesn't leak into ELF binaries
+- `CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS=0755` pins directory modes created by `install(DIRECTORY)` regardless of umask
+- A post-install `install(CODE ... ALL_COMPONENTS)` in `cmake/Install.cmake` walks the staging tree and chmods every directory to 0755 (covers implicit parents that the DEFAULT_DIRECTORY_PERMISSIONS setting doesn't reach, and runs for every CPack per-component install, not just "Unspecified")
+- For DEB packaging specifically, callers must invoke `cpack` with `umask 022` (the standard Debian packaging umask) — `dpkg-deb` records the calling process's umask into `ar`-archive member modes and the packaging prefix directory's mode. The verify script and CI job both set `umask 022` around the `cpack` invocation.
 
 ## Adding a New Library
 

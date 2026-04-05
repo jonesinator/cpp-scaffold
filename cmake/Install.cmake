@@ -37,3 +37,30 @@ install(
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/scaffold
     COMPONENT   cmake_config
 )
+
+# ---------- Reproducibility: normalize staged directory permissions ----------
+# Implicit parent directories created while installing files (bin/, include/,
+# lib/, lib/cmake/, ...) inherit permissions from the current umask.
+# CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS only covers directories
+# created by explicit install(DIRECTORY ...) commands, not these implicit
+# parents, so TGZ/DEB/RPM hashes diverge between a umask-022 build and
+# a umask-027 build. Force every directory under the staging prefix to
+# 0755 as the last install step so archive content is umask-independent.
+install(CODE [[
+    # Honor DESTDIR (set by `cmake --install --prefix=... DESTDIR=...` and by
+    # CPack staging). Without this, file(CHMOD) would try to chmod paths
+    # under a non-existent /usr/local/... during a DESTDIR install.
+    set(_repro_prefix "${CMAKE_INSTALL_PREFIX}")
+    if(DEFINED ENV{DESTDIR} AND NOT "$ENV{DESTDIR}" STREQUAL "")
+        set(_repro_prefix "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}")
+    endif()
+    file(GLOB_RECURSE _repro_entries LIST_DIRECTORIES true "${_repro_prefix}/*")
+    foreach(_entry IN LISTS _repro_entries)
+        if(IS_DIRECTORY "${_entry}")
+            file(CHMOD "${_entry}" PERMISSIONS
+                OWNER_READ OWNER_WRITE OWNER_EXECUTE
+                GROUP_READ GROUP_EXECUTE
+                WORLD_READ WORLD_EXECUTE)
+        endif()
+    endforeach()
+]] ALL_COMPONENTS)

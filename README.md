@@ -101,7 +101,11 @@ Release builds are deterministic given the same toolchain:
 - `-ffile-prefix-map` remaps absolute source paths to `.`
 - mold linker produces content-addressed SHA-256 build IDs
 - `SOURCE_DATE_EPOCH` can be set to pin `__DATE__`/`__TIME__` macros
+- `CMAKE_BUILD_RPATH_USE_ORIGIN=ON` rewrites build-tree `DT_RUNPATH` to `$ORIGIN`-relative so the source directory doesn't leak into ELF binaries
+- `CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS` + a post-install `ALL_COMPONENTS` chmod force 0755 on every staged directory, so packaging is independent of the build's umask
 - Stripped release binaries contain no debug symbols or local path information
+
+**Verification:** `just verify-reproducibility` (or [`scripts/verify-reproducibility.sh`](scripts/verify-reproducibility.sh)) double-builds with a perturbed environment (source path, `HOME`, `TMPDIR`, `umask`, `TZ`, `LC_ALL`, parallelism) and SHA-256-compares every artifact. The [`reproducibility` CI job](.github/workflows/ci.yml) runs this on every push, covering binaries, shared/static libraries, the source TGZ, and all 12 per-component DEBs; on mismatch it uploads `diffoscope` HTML reports as an artifact.
 
 ### Development Environments
 

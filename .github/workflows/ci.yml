@@ -582,6 +582,45 @@ jobs:
           expected=$(printf '0.1.0\ncsv\njson')
           test "$actual" = "$expected"
 
+  reproducibility:
+    name: Reproducibility (trixie, release)
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
+    needs: setup
+    env:
+      SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
+      CPACK_GENERATORS: "TGZ;DEB"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Install toolchain + diffoscope
+        run: |
+          apt-get update && apt-get install -y --no-install-recommends \
+            g++ cmake ninja-build mold dpkg-dev diffoscope-minimal bash tzdata
+          # tzdata lets build B's TZ=Asia/Tokyo actually take effect;
+          # C.UTF-8 is built into glibc so no locale-gen is needed.
+
+      - name: Run double-build verification
+        run: bash scripts/verify-reproducibility.sh /tmp/scaffold-repro
+
+      - name: Upload diffoscope report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: reproducibility-diffoscope-report
+          path: /tmp/scaffold-repro/report/
+          if-no-files-found: ignore
+
+      - name: Upload sha256 sums
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: reproducibility-sums
+          path: |
+            /tmp/scaffold-repro/a.sums
+            /tmp/scaffold-repro/b.sums
+          if-no-files-found: ignore
+
   cve-scan:
     name: CVE Scan
     needs: [setup, package, static-binaries]
