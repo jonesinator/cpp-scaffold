@@ -95,6 +95,8 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 
 **Static binaries:** The `static` CMake preset (`just build static`) enables `SCAFFOLD_STATIC_BINARIES=ON` which links binaries against the `*_static` library targets and adds `-static` link flag. Built on Alpine it produces musl-static binaries (~1.4 MB each) that run on any Linux distro without runtime deps. CI uploads them as `scaffold-csv2json-static-x86_64` / `scaffold-json2csv-static-x86_64` artifacts.
 
+**SBOMs:** CI generates SPDX-JSON SBOMs via syft for every artifact — per-package (11 per distro×profile in the `*-sboms` artifact), build-environment (one `buildenv-<distro>-<profile>.spdx.json` per package job capturing toolchain state), static binary (ships inside the static binary artifacts), and source (in `scaffold-source-sbom` along with runner image metadata). We don't generate an SBOM for the outer Ubuntu runner — GitHub publishes those at actions/runner-images.
+
 **Package definitions:**
 - CPack (TGZ/DEB/RPM): configured in `cmake/Packaging.cmake`
 - Nix: `packages.default` output in `flake.nix`

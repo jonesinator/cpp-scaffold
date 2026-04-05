@@ -8,7 +8,7 @@ on:
 
 jobs:
   setup:
-    name: Setup (compute SOURCE_DATE_EPOCH)
+    name: Setup (SOURCE_DATE_EPOCH + source SBOM)
     runs-on: ubuntu-latest
     outputs:
       source_date_epoch: ${{ steps.sde.outputs.value }}
@@ -16,6 +16,25 @@ jobs:
       - uses: actions/checkout@v6
       - id: sde
         run: echo "value=$(git log -1 --format=%ct)" >> "$GITHUB_OUTPUT"
+      - name: Install syft
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Generate source SBOM
+        run: syft scan dir:. -o spdx-json=scaffold-source.spdx.json
+      - name: Record runner metadata
+        run: |
+          {
+            echo "GitHub Runner Image: $ImageOS $ImageVersion"
+            echo "Runner image SBOMs: https://github.com/actions/runner-images/releases"
+            echo "Git commit: $(git rev-parse HEAD)"
+            echo "SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}"
+          } > runner-info.txt
+      - name: Upload source SBOM
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-source-sbom
+          path: |
+            scaffold-source.spdx.json
+            runner-info.txt
 
   nix:
     name: Check (Nix)
@@ -148,16 +167,28 @@ jobs:
           strip build/static/bin/csv2json/csv2json -o static-out/csv2json-x86_64
           strip build/static/bin/json2csv/json2csv -o static-out/json2csv-x86_64
           ls -lh static-out/
+      - name: Install syft
+        run: |
+          apk add --no-cache curl ca-certificates
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Generate static binary SBOMs
+        run: |
+          syft scan file:static-out/csv2json-x86_64 -o spdx-json=static-out/csv2json-x86_64.spdx.json
+          syft scan file:static-out/json2csv-x86_64 -o spdx-json=static-out/json2csv-x86_64.spdx.json
       - name: Upload csv2json
         uses: actions/upload-artifact@v7
         with:
           name: scaffold-csv2json-static-x86_64
-          path: static-out/csv2json-x86_64
+          path: |
+            static-out/csv2json-x86_64
+            static-out/csv2json-x86_64.spdx.json
       - name: Upload json2csv
         uses: actions/upload-artifact@v7
         with:
           name: scaffold-json2csv-static-x86_64
-          path: static-out/json2csv-x86_64
+          path: |
+            static-out/json2csv-x86_64
+            static-out/json2csv-x86_64.spdx.json
 
   static-binaries-smoke-test:
     name: Static Binary Smoke Test (${{ matrix.target }})
@@ -304,6 +335,18 @@ jobs:
         if: matrix.distro == 'arch'
         run: pacman -Syu --noconfirm --needed gcc cmake ninja mold ccache fakeroot
 
+      - name: Install syft
+        run: |
+          # Ensure curl + CA certs are available (slim containers may lack them)
+          (command -v apt-get >/dev/null && apt-get install -y --no-install-recommends curl ca-certificates) || \
+          (command -v apk >/dev/null && apk add --no-cache curl ca-certificates) || true
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Build-env SBOM
+        run: |
+          mkdir -p sboms
+          syft scan dir:/ -o spdx-json=sboms/buildenv-${{ matrix.distro }}-${{ matrix.profile }}.spdx.json
+
       - name: Build + Package (CPack)
         run: |
           cmake --preset ${{ matrix.profile }}
@@ -330,6 +373,26 @@ jobs:
             SCAFFOLD_PROFILE=${{ matrix.profile }} abuild -F
           "
           find /home/builder/packages -name "*.apk" -exec cp {} . \;
+
+      - name: Generate per-package SBOMs
+        run: |
+          for pkg in build/${{ matrix.profile }}/scaffold-*.deb \
+                     build/${{ matrix.profile }}/scaffold-*.rpm \
+                     build/${{ matrix.profile }}/scaffold-*.tar.gz \
+                     ./*.apk \
+                     ./*.pkg.tar.zst; do
+            if [ -f "$pkg" ]; then
+              syft scan "file:$pkg" -o spdx-json="sboms/$(basename "$pkg").spdx.json"
+              echo "Generated SBOM for $(basename "$pkg")"
+            fi
+          done
+          ls -la sboms/
+
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-sboms
+          path: sboms/
 
       - name: Upload TGZ
         uses: actions/upload-artifact@v7

@@ -11,11 +11,11 @@ GitHub Actions workflow definitions.
 
 | Job | Scope |
 |---|---|
-| `setup` | Computes `SOURCE_DATE_EPOCH` from the git commit timestamp; exposed to all building jobs for reproducible builds |
+| `setup` | Computes `SOURCE_DATE_EPOCH` from the git commit timestamp; generates a source SBOM (via syft) + runner image metadata |
 | `nix` | `just check` + `nix build` + binary smoke-test |
 | `format-check`, `lint`, `docs`, `deps`, `coverage` | Single-run concerns (Debian trixie); `docs`/`deps`/`coverage` upload their outputs as artifacts |
 | `test` | 4 distros × 4 profiles = **16 jobs** running `just test <profile>` |
-| `package` | 4 distros × 4 profiles = **16 jobs** producing per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) + monolithic TGZ |
+| `package` | 4 distros × 4 profiles = **16 jobs** producing per-component DEB/RPM/APK/pkg.tar.zst packages (~11 files each) + monolithic TGZ + syft SBOMs (per-package + build-environment) |
 | `install-test` | 4 distros × native+TGZ formats = 7 jobs verifying package install + `find_package` consumer |
 | `static-binaries` | Produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries |
 | `static-binaries-smoke-test` | Runs static binary on Alpine/Debian/Fedora/Arch |

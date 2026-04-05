@@ -73,6 +73,15 @@ Each profile produces 11 packages per distro. Packaging formats:
 
 **Static binaries:** for download-and-run usage, the `static` CMake preset builds fully musl-linked binaries (`csv2json-x86_64`, `json2csv-x86_64`) that run on any Linux distribution regardless of libc. Built on Alpine; smoke-tested against Alpine, Debian, Fedora, Arch, and busybox in CI.
 
+**SBOMs** (Software Bill of Materials): CI generates SPDX-JSON SBOMs via [syft](https://github.com/anchore/syft) for every published artifact:
+
+- **Per-package SBOMs** — one per `.deb`/`.rpm`/`.apk`/`.pkg.tar.zst`/`.tar.gz` file
+- **Build-environment SBOMs** — one per distro × profile combination, capturing the toolchain state
+- **Static binary SBOMs** — shipped alongside each static binary
+- **Source SBOM** — one covering the repository source tree, plus runner image metadata
+
+The outer GitHub Actions runner isn't SBOM-scanned by us — GitHub publishes runner image SBOMs at [actions/runner-images](https://github.com/actions/runner-images/releases); the `scaffold-source-sbom` artifact records which runner version was used.
+
 ### Reproducible Builds
 
 Release builds are deterministic given the same toolchain:
