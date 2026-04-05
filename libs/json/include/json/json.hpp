@@ -26,8 +26,8 @@ namespace json
  * string. The first object's key order defines the resulting table's
  * header order; every subsequent object must have the same key set.
  * Whitespace is tolerated between tokens. Supports the standard JSON
- * escapes (\", \\, \/, \b, \f, \n, \r, \t) and \uXXXX including UTF-16
- * surrogate pairs for supplementary-plane code points.
+ * escapes (\\", \\\\, \\/, \\b, \\f, \\n, \\r, \\t) and \\uXXXX including
+ * UTF-16 surrogate pairs for supplementary-plane code points.
  *
  * @param text The JSON text to parse.
  * @return A Table with one row per object.

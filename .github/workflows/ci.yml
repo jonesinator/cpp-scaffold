@@ -59,7 +59,7 @@ jobs:
         continue-on-error: true
       - run: nix develop --command just check
       - run: nix build
-      - run: ./result/bin/csv2json | grep -q csv
+      - run: printf 'k\nv\n' | ./result/bin/csv2json | grep -q '"k": "v"'
       - name: Verify derivation is bit-reproducible
         run: nix build --rebuild
 
@@ -243,9 +243,7 @@ jobs:
       - name: Run static binary
         run: |
           chmod +x /tmp/csv2json-x86_64
-          actual=$(/tmp/csv2json-x86_64)
-          expected=$(printf 'csv\njson')
-          test "$actual" = "$expected"
+          printf 'k\nv\n' | /tmp/csv2json-x86_64 | grep -q '"k": "v"'
 
   static-binaries-busybox-test:
     name: Static Binary Smoke Test (busybox)
@@ -261,9 +259,7 @@ jobs:
       - name: Run in busybox
         run: |
           chmod +x /tmp/csv2json-x86_64
-          actual=$(docker run --rm -v /tmp/csv2json-x86_64:/t:ro busybox@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e /t)  # busybox:latest
-          expected=$(printf 'csv\njson')
-          test "$actual" = "$expected"
+          printf 'k\nv\n' | docker run --rm -i -v /tmp/csv2json-x86_64:/t:ro busybox@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e /t | grep -q '"k": "v"'  # busybox:latest
 
   test:
     name: Test (${{ matrix.distro }}, ${{ matrix.profile }})
@@ -557,9 +553,7 @@ jobs:
 
       - name: Test binary
         run: |
-          actual=$(csv2json)
-          expected=$(printf 'csv\njson')
-          test "$actual" = "$expected"
+          printf 'k\nv\n' | csv2json | grep -q '"k": "v"'
 
       - name: Install build tools (Debian)
         if: matrix.distro == 'trixie'
