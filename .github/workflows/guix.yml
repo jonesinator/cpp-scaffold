@@ -10,6 +10,20 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: PromyLOPh/guix-install-action@v1
-      - run: guix shell --fallback -m manifest.scm -- just check
+      # Skip `just check` — Guix's clang-tools version is incompatible with
+      # GCC 15's libstdc++ C++26 macros (_GLIBCXX26_CONSTEXPR etc.), which
+      # breaks `just lint`. Lint already runs on Debian as a dedicated job.
+      # Run the remaining pieces individually.
+      - run: |
+          guix shell --fallback -m manifest.scm -- sh -c '
+            just format-check &&
+            just test debug &&
+            just test release &&
+            just test asan &&
+            just test tsan &&
+            just coverage &&
+            just docs &&
+            just deps
+          '
       - run: guix build -f package.scm
       - run: "$(guix build -f package.scm)/bin/csv2json | grep -q csv"

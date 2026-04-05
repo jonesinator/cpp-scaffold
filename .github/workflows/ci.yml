@@ -146,8 +146,6 @@ jobs:
             container: fedora:latest
           - target: arch
             container: archlinux:latest
-          - target: busybox
-            container: busybox:latest
     container: ${{ matrix.container }}
     steps:
       - uses: actions/download-artifact@v8
@@ -158,6 +156,24 @@ jobs:
         run: |
           chmod +x /tmp/csv2json-x86_64
           actual=$(/tmp/csv2json-x86_64)
+          expected=$(printf 'csv\njson')
+          test "$actual" = "$expected"
+
+  static-binaries-busybox-test:
+    name: Static Binary Smoke Test (busybox)
+    needs: static-binaries
+    runs-on: ubuntu-latest
+    # busybox can't host GitHub Actions (no glibc/libdl), so test via `docker run`
+    # from the Ubuntu runner instead of using container:.
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: scaffold-csv2json-static-x86_64
+          path: /tmp
+      - name: Run in busybox
+        run: |
+          chmod +x /tmp/csv2json-x86_64
+          actual=$(docker run --rm -v /tmp/csv2json-x86_64:/t:ro busybox:latest /t)
           expected=$(printf 'csv\njson')
           test "$actual" = "$expected"
 
