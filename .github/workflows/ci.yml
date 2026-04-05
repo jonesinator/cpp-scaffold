@@ -59,7 +59,8 @@ jobs:
         continue-on-error: true
       - run: nix develop --command just check
       - run: nix build
-      - run: printf 'k\nv\n' | ./result/bin/csv2json | grep -q '"k": "v"'
+      - run: |
+          printf 'k\nv\n' | ./result/bin/csv2json | grep -q '"k": "v"'
       - name: Verify derivation is bit-reproducible
         run: nix build --rebuild
 
@@ -667,7 +668,7 @@ jobs:
           mkdir -p cve-reports
           fail=0
           # Find all .spdx.json files across downloaded artifacts
-          for sbom in $(find /tmp/artifacts -name "*.spdx.json"); do
+          while IFS= read -r sbom; do
             name=$(basename "$sbom" .spdx.json)
             echo "=== Scanning $name ==="
             # Write JSON report (always)
@@ -684,7 +685,7 @@ jobs:
               echo "FAIL: $name has critical CVEs"
               fail=1
             fi
-          done
+          done < <(find /tmp/artifacts -name "*.spdx.json")
           # Collect summary
           echo "=== Summary ==="
           ls -la cve-reports/
@@ -715,7 +716,7 @@ jobs:
           # Flatten nested artifact structure into one directory
           find /tmp/artifacts -type f -exec cp {} release-files/ \;
           cd release-files
-          sha256sum * > SHA256SUMS
+          sha256sum ./* > SHA256SUMS
           ls -lh
       - name: Create GitHub Release
         uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
