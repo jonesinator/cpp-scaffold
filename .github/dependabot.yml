@@ -1,0 +1,35 @@
+version: 2
+updates:
+  # Keep GitHub Actions pinned to latest SHAs
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+  # Keep CI Dockerfile base images current (ci/<distro>/Dockerfile)
+  # Note: Dependabot's docker ecosystem only scans Dockerfiles, not
+  # `container:` references in workflow YAML. Those SHAs are updated manually.
+  - package-ecosystem: "docker"
+    directory: "/ci/trixie"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+  - package-ecosystem: "docker"
+    directory: "/ci/fedora"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+  - package-ecosystem: "docker"
+    directory: "/ci/alpine"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
+  - package-ecosystem: "docker"
+    directory: "/ci/arch"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]

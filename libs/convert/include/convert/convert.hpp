@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file convert.hpp
  * @brief Public interface for the convert library.

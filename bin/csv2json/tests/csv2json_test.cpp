@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file csv2json_test.cpp
  * @brief Integration tests for the csv2json binary.

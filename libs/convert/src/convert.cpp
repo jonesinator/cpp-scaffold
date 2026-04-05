@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file convert.cpp
  * @brief Implementation of the convert library.

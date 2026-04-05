@@ -20,3 +20,7 @@ GitHub Actions workflow definitions.
 | `static-binaries` | Produces musl-static `csv2json-x86_64` / `json2csv-x86_64` binaries |
 | `static-binaries-smoke-test` | Runs static binary on Alpine/Debian/Fedora/Arch |
 | `static-binaries-busybox-test` | Runs static binary inside busybox via `docker run` |
+| `cve-scan` | Downloads all SBOMs, scans each with Grype, fails on critical CVEs, uploads JSON reports |
+| `release` | Tag-triggered (`v*`). Downloads all artifacts, builds SHA256SUMS, creates GitHub Release |
+
+All actions pinned to SHAs, container images pinned to digests, runner pinned to `ubuntu-24.04`. Dependabot config at [`.github/dependabot.yml`](../dependabot.yml).

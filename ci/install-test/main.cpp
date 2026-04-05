@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 #include <convert/convert.hpp>
 #include <core/core.hpp>
 #include <scaffold/version.hpp>

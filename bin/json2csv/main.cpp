@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file main.cpp
  * @brief Entry point for the json2csv binary.

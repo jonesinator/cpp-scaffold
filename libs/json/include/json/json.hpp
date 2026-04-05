@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file json.hpp
  * @brief Public interface for the json library.

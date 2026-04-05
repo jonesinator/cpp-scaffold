@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file core_test.cpp
  * @brief Unit tests for the core library.

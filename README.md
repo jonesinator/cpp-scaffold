@@ -82,6 +82,18 @@ Each profile produces 11 packages per distro. Packaging formats:
 
 The outer GitHub Actions runner isn't SBOM-scanned by us — GitHub publishes runner image SBOMs at [actions/runner-images](https://github.com/actions/runner-images/releases); the `scaffold-source-sbom` artifact records which runner version was used.
 
+**SLSA build provenance**: every published package and static binary is accompanied by a [SLSA v1 provenance attestation](https://slsa.dev/) generated via `actions/attest-build-provenance`. Consumers can verify an artifact came from this repo's CI with:
+
+```bash
+gh attestation verify path/to/artifact --repo owner/scaffold
+```
+
+**CVE scanning**: every CI run scans all generated SBOMs with [Grype](https://github.com/anchore/grype) against public vulnerability databases. The build fails on critical-severity CVEs; full JSON reports are uploaded as the `scaffold-cve-reports` artifact for every severity level.
+
+**Releases**: Pushing a git tag matching `v*` (e.g., `v0.2.0`) triggers the release job, which downloads all CI artifacts, generates a SHA256SUMS manifest, and creates a GitHub Release with all package files + SBOMs + static binaries attached.
+
+**Supply-chain pinning**: All GitHub Actions are pinned to commit SHAs (with version comments), all container images are pinned to SHA256 digests, and the Ubuntu runner is pinned to `ubuntu-24.04`. [Dependabot](.github/dependabot.yml) updates these weekly.
+
 ### Reproducible Builds
 
 Release builds are deterministic given the same toolchain:

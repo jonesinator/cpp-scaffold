@@ -3,17 +3,23 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write       # needed for attest-build-provenance OIDC
+  attestations: write   # needed to write attestations
 
 jobs:
   setup:
     name: Setup (SOURCE_DATE_EPOCH + source SBOM)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       source_date_epoch: ${{ steps.sde.outputs.value }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - id: sde
         run: echo "value=$(git log -1 --format=%ct)" >> "$GITHUB_OUTPUT"
       - name: Install syft
@@ -29,7 +35,7 @@ jobs:
             echo "SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}"
           } > runner-info.txt
       - name: Upload source SBOM
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-source-sbom
           path: |
@@ -38,16 +44,16 @@ jobs:
 
   nix:
     name: Check (Nix)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: cachix/install-nix-action@v31
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+      - uses: cachix/install-nix-action@96951a368ba55167b55f1c916f7d416bac6505fe  # v31.10.3
         with:
           nix_path: nixpkgs=channel:nixpkgs-unstable
-      - uses: cachix/cachix-action@v17
+      - uses: cachix/cachix-action@1eb2ef646ac0255473d23a5907ad7b04ce94065c  # v17
         with:
           name: scaffold
         continue-on-error: true
@@ -57,10 +63,10 @@ jobs:
 
   format-check:
     name: Format check
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install clang-format + just
         run: apt-get update && apt-get install -y --no-install-recommends clang-format just
       - name: Run format-check
@@ -68,13 +74,13 @@ jobs:
 
   lint:
     name: Lint
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
         run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold clang-tidy just
       - name: Run lint
@@ -82,13 +88,13 @@ jobs:
 
   docs:
     name: Docs
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
         run: |
           apt-get update && apt-get install -y --no-install-recommends \
@@ -99,7 +105,7 @@ jobs:
       - name: Run docs
         run: just docs
       - name: Upload docs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-docs
           path: |
@@ -108,38 +114,38 @@ jobs:
 
   deps:
     name: Deps
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
         run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold graphviz just
       - name: Run deps
         run: just deps
       - name: Upload deps graph
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-deps
           path: build/deps.svg
 
   coverage:
     name: Coverage
-    runs-on: ubuntu-latest
-    container: debian:trixie-slim
+    runs-on: ubuntu-24.04
+    container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
         run: apt-get update && apt-get install -y --no-install-recommends g++ cmake ninja-build mold lcov just
       - name: Run coverage
         run: just coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-coverage
           path: |
@@ -148,13 +154,13 @@ jobs:
 
   static-binaries:
     name: Static Binaries (x86_64)
-    runs-on: ubuntu-latest
-    container: alpine:edge
+    runs-on: ubuntu-24.04
+    container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
         run: apk add --no-cache g++ cmake samurai mold ccache
       - name: Build static
@@ -175,15 +181,21 @@ jobs:
         run: |
           syft scan file:static-out/csv2json-x86_64 -o spdx-json=static-out/csv2json-x86_64.spdx.json
           syft scan file:static-out/json2csv-x86_64 -o spdx-json=static-out/json2csv-x86_64.spdx.json
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-path: |
+            static-out/csv2json-x86_64
+            static-out/json2csv-x86_64
       - name: Upload csv2json
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-csv2json-static-x86_64
           path: |
             static-out/csv2json-x86_64
             static-out/csv2json-x86_64.spdx.json
       - name: Upload json2csv
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-json2csv-static-x86_64
           path: |
@@ -193,21 +205,21 @@ jobs:
   static-binaries-smoke-test:
     name: Static Binary Smoke Test (${{ matrix.target }})
     needs: static-binaries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         include:
           - target: alpine
-            container: alpine:edge
+            container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
           - target: debian
-            container: debian:trixie-slim
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
           - target: fedora
-            container: fedora:latest
+            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
           - target: arch
-            container: archlinux:latest
+            container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: scaffold-csv2json-static-x86_64
           path: /tmp
@@ -221,24 +233,24 @@ jobs:
   static-binaries-busybox-test:
     name: Static Binary Smoke Test (busybox)
     needs: static-binaries
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # busybox can't host GitHub Actions (no glibc/libdl), so test via `docker run`
     # from the Ubuntu runner instead of using container:.
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: scaffold-csv2json-static-x86_64
           path: /tmp
       - name: Run in busybox
         run: |
           chmod +x /tmp/csv2json-x86_64
-          actual=$(docker run --rm -v /tmp/csv2json-x86_64:/t:ro busybox:latest /t)
+          actual=$(docker run --rm -v /tmp/csv2json-x86_64:/t:ro busybox@sha256:1487d0af5f52b4ba31c7e465126ee2123fe3f2305d638e7827681e7cf6c83d5e /t)  # busybox:latest
           expected=$(printf 'csv\njson')
           test "$actual" = "$expected"
 
   test:
     name: Test (${{ matrix.distro }}, ${{ matrix.profile }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
@@ -249,16 +261,16 @@ jobs:
         profile: [debug, release, asan, tsan]
         include:
           - distro: trixie
-            container: debian:trixie-slim
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
           - distro: fedora
-            container: fedora:latest
+            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
           - distro: alpine
-            container: alpine:edge
+            container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
           - distro: arch
-            container: archlinux:latest
+            container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install toolchain (Debian)
         if: matrix.distro == 'trixie'
@@ -281,7 +293,7 @@ jobs:
 
   package:
     name: Package (${{ matrix.distro }}, ${{ matrix.profile }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: setup
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
@@ -292,28 +304,28 @@ jobs:
         profile: [release, debug, asan, tsan]
         include:
           - distro: trixie
-            container: debian:trixie-slim
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
             generators: "TGZ;DEB"
             use_makepkg: false
             use_abuild: false
           - distro: fedora
-            container: fedora:latest
+            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             generators: "TGZ;RPM"
             use_makepkg: false
             use_abuild: false
           - distro: alpine
-            container: alpine:edge
+            container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
             generators: "TGZ"
             use_makepkg: false
             use_abuild: true
           - distro: arch
-            container: archlinux:latest
+            container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
             generators: "TGZ"
             use_makepkg: true
             use_abuild: false
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Install build tools (Debian)
         if: matrix.distro == 'trixie'
@@ -388,42 +400,52 @@ jobs:
           done
           ls -la sboms/
 
+      - name: Generate build provenance attestation
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32  # v4.1.0
+        with:
+          subject-path: |
+            build/${{ matrix.profile }}/scaffold-*.deb
+            build/${{ matrix.profile }}/scaffold-*.rpm
+            build/${{ matrix.profile }}/scaffold-*.tar.gz
+            ./*.apk
+            ./*.pkg.tar.zst
+
       - name: Upload SBOMs
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-sboms
           path: sboms/
 
       - name: Upload TGZ
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-tgz
           path: build/${{ matrix.profile }}/scaffold-*.tar.gz
 
       - name: Upload DEB
         if: matrix.distro == 'trixie'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-deb
           path: build/${{ matrix.profile }}/scaffold-*.deb
 
       - name: Upload RPM
         if: matrix.distro == 'fedora'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-rpm
           path: build/${{ matrix.profile }}/scaffold-*.rpm
 
       - name: Upload pkg.tar.zst
         if: matrix.use_makepkg == true
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-pkg
           path: "*.pkg.tar.zst"
 
       - name: Upload APK
         if: matrix.use_abuild == true
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-apk
           path: "*.apk"
@@ -431,7 +453,7 @@ jobs:
   install-test:
     name: Install Test (${{ matrix.distro }}, ${{ matrix.format }})
     needs: [setup, package]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SOURCE_DATE_EPOCH: ${{ needs.setup.outputs.source_date_epoch }}
     strategy:
@@ -439,46 +461,46 @@ jobs:
         include:
           # Debian — DEB + TGZ
           - distro: trixie
-            container: debian:trixie-slim
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
             format: deb
             pkg_glob: "*.deb"
           - distro: trixie
-            container: debian:trixie-slim
+            container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
             format: tgz
             pkg_glob: "*.tar.gz"
           # Fedora — RPM + TGZ
           - distro: fedora
-            container: fedora:latest
+            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             format: rpm
             pkg_glob: "*.rpm"
           - distro: fedora
-            container: fedora:latest
+            container: fedora@sha256:3a63490f02a445d6d842c110f5255d148dcdc70634c21ebf4693700c5578d3ea  # fedora:latest
             format: tgz
             pkg_glob: "*.tar.gz"
           # Alpine — APK + TGZ
           - distro: alpine
-            container: alpine:edge
+            container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
             format: apk
             pkg_glob: "*.apk"
           - distro: alpine
-            container: alpine:edge
+            container: alpine@sha256:853db5e6f507c07b2aaf5c68cde6a86b636a073515906dd176af24108f940ebc  # alpine:edge
             format: tgz
             pkg_glob: "*.tar.gz"
           # Arch — pkg.tar.zst + TGZ
           - distro: arch
-            container: archlinux:latest
+            container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
             format: pkg
             pkg_glob: "*.pkg.tar.zst"
           - distro: arch
-            container: archlinux:latest
+            container: archlinux@sha256:237637c52069930ed7fc76c76f04b6b6b9cf82c5222ae002b7932df983cb69c1  # archlinux:latest
             format: tgz
             pkg_glob: "*.tar.gz"
     container: ${{ matrix.container }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Download package
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
           name: scaffold-${{ matrix.distro }}-release-${{ matrix.format }}
           path: /tmp/pkg
@@ -539,3 +561,69 @@ jobs:
           actual=$(/tmp/consumer-build/app)
           expected=$(printf '0.1.0\ncsv\njson')
           test "$actual" = "$expected"
+
+  cve-scan:
+    name: CVE Scan
+    needs: [setup, package, static-binaries]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download all SBOMs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          path: /tmp/artifacts
+      - name: Install grype
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+      - name: Scan SBOMs
+        run: |
+          mkdir -p cve-reports
+          fail=0
+          # Find all .spdx.json files across downloaded artifacts
+          for sbom in $(find /tmp/artifacts -name "*.spdx.json"); do
+            name=$(basename "$sbom" .spdx.json)
+            echo "=== Scanning $name ==="
+            # Write JSON report (always)
+            grype sbom:"$sbom" -o json > "cve-reports/$name.cve.json" 2>/dev/null || true
+            # Human-readable, fails on critical
+            if ! grype sbom:"$sbom" --fail-on critical -o table; then
+              echo "FAIL: $name has critical CVEs"
+              fail=1
+            fi
+          done
+          # Collect summary
+          echo "=== Summary ==="
+          ls -la cve-reports/
+          exit $fail
+      - name: Upload CVE reports
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: scaffold-cve-reports
+          path: cve-reports/
+
+  release:
+    name: Release
+    # Only run on tag pushes (v*)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package, static-binaries, install-test, static-binaries-smoke-test, static-binaries-busybox-test, cve-scan]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # create releases
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          path: /tmp/artifacts
+      - name: Flatten + checksum
+        run: |
+          mkdir -p release-files
+          # Flatten nested artifact structure into one directory
+          find /tmp/artifacts -type f -exec cp {} release-files/ \;
+          cd release-files
+          sha256sum * > SHA256SUMS
+          ls -lh
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe  # v2.6.1
+        with:
+          files: release-files/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

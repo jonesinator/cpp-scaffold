@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file subprocess.hpp
  * @brief Lightweight subprocess runner for binary integration tests.

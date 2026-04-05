@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file core.cpp
  * @brief Implementation of the core library.

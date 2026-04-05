@@ -97,6 +97,14 @@ All libraries (`core`, `csv`, `json`, `convert`) and both binaries (`csv2json`, 
 
 **SBOMs:** CI generates SPDX-JSON SBOMs via syft for every artifact — per-package (11 per distro×profile in the `*-sboms` artifact), build-environment (one `buildenv-<distro>-<profile>.spdx.json` per package job capturing toolchain state), static binary (ships inside the static binary artifacts), and source (in `scaffold-source-sbom` along with runner image metadata). We don't generate an SBOM for the outer Ubuntu runner — GitHub publishes those at actions/runner-images.
 
+**Build provenance:** every published artifact (packages + static binaries) has a SLSA v1 provenance attestation via `actions/attest-build-provenance`. Verify with `gh attestation verify <file> --repo owner/scaffold`.
+
+**CVE scanning:** the `cve-scan` job runs Grype against every SBOM produced (source, per-package, build-env, static binary). Fails CI on critical severity. Reports uploaded as `scaffold-cve-reports` artifact.
+
+**Releases:** Pushing a `v*` git tag triggers the `release` job which downloads all CI artifacts, generates a SHA256SUMS file, and creates a GitHub Release with everything attached.
+
+**Supply-chain pinning:** All GitHub Actions pinned to commit SHAs, container images pinned to SHA256 digests, Ubuntu runner pinned to `ubuntu-24.04`. Dependabot (`.github/dependabot.yml`) updates these weekly. Container images referenced via `container:` in workflow YAML are updated manually since Dependabot's docker ecosystem only scans Dockerfiles.
+
 **Package definitions:**
 - CPack (TGZ/DEB/RPM): configured in `cmake/Packaging.cmake`
 - Nix: `packages.default` output in `flake.nix`

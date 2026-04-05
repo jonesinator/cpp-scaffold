@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /**
  * @file json_test.cpp
  * @brief Unit tests for the json library.
