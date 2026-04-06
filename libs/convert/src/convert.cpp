@@ -9,6 +9,8 @@
 #include "csv/csv.hpp"
 
 #include "json/json.hpp"
+#include <string>
+#include <string_view>
 
 namespace convert
 {

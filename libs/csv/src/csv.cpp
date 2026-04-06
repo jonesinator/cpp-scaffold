@@ -6,6 +6,7 @@
 
 #include "csv/csv.hpp"
 
+#include <core/table.hpp>
 #include <cstddef>
 #include <format>
 #include <stdexcept>
@@ -41,8 +42,8 @@ struct Cursor
  */
 auto consume_quoted_char(Cursor& cur, std::string& field) -> bool
 {
-    const char c = cur.text.at(cur.pos);
-    if (c == '"')
+    const char chr = cur.text.at(cur.pos);
+    if (chr == '"')
     {
         if (cur.pos + 1 < cur.text.size() && cur.text.at(cur.pos + 1) == '"')
         {
@@ -53,11 +54,11 @@ auto consume_quoted_char(Cursor& cur, std::string& field) -> bool
         ++cur.pos;
         return false;
     }
-    if (c == '\n')
+    if (chr == '\n')
     {
         ++cur.line;
     }
-    field.push_back(c);
+    field.push_back(chr);
     ++cur.pos;
     return true;
 }
@@ -86,25 +87,25 @@ auto parse_row(Cursor& cur) -> std::vector<std::string>
             in_quotes = consume_quoted_char(cur, field);
             continue;
         }
-        const char c = cur.text.at(cur.pos);
-        if (c == '"' && field.empty())
+        const char chr = cur.text.at(cur.pos);
+        if (chr == '"' && field.empty())
         {
             in_quotes = true;
             ++cur.pos;
         }
-        else if (c == ',')
+        else if (chr == ',')
         {
             fields.push_back(std::move(field));
             field.clear();
             ++cur.pos;
         }
-        else if (c == '\r' || c == '\n')
+        else if (chr == '\r' || chr == '\n')
         {
             break;
         }
         else
         {
-            field.push_back(c);
+            field.push_back(chr);
             ++cur.pos;
         }
     }
@@ -137,34 +138,34 @@ void skip_line_terminator(Cursor& cur)
 
 /**
  * @brief Whether a field must be quoted on output.
- * @param s The raw field value.
- * @return true if @p s contains a comma, quote, CR, or LF.
+ * @param str The raw field value.
+ * @return true if @p str contains a comma, quote, CR, or LF.
  */
-auto needs_quoting(std::string_view s) -> bool
+auto needs_quoting(std::string_view str) -> bool
 {
-    return s.find_first_of(",\"\r\n") != std::string_view::npos;
+    return str.find_first_of(",\"\r\n") != std::string_view::npos;
 }
 
 /**
  * @brief Append a single field to @p out, quoting and escaping if necessary.
  * @param out The output buffer.
- * @param s   The field value.
+ * @param str The field value.
  */
-void write_field(std::string& out, std::string_view s)
+void write_field(std::string& out, std::string_view str)
 {
-    if (!needs_quoting(s))
+    if (!needs_quoting(str))
     {
-        out.append(s);
+        out.append(str);
         return;
     }
     out.push_back('"');
-    for (const char c : s)
+    for (const char chr : str)
     {
-        if (c == '"')
+        if (chr == '"')
         {
             out.push_back('"');
         }
-        out.push_back(c);
+        out.push_back(chr);
     }
     out.push_back('"');
 }
@@ -203,7 +204,7 @@ auto write(const core::Table& table) -> std::string
 {
     std::string out;
 
-    auto write_row = [&out](const std::vector<std::string>& row)
+    auto write_row = [&out](const std::vector<std::string>& row) -> void
     {
         for (std::size_t i = 0; i < row.size(); ++i)
         {

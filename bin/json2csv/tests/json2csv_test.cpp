@@ -7,6 +7,9 @@
 #include "test_support/expect.hpp"
 #include "test_support/subprocess.hpp"
 
+#include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <string>
 
 /// Path to the json2csv binary, injected by CMake.
@@ -16,11 +19,13 @@
 
 auto main() -> int
 {
-    expect::Suite suite("json2csv");
-
-    // Happy path.
+    try
     {
-        const std::string json_in = R"([
+        expect::Suite suite("json2csv");
+
+        // Happy path.
+        {
+            const std::string json_in = R"([
   {
     "name": "Ada",
     "city": "London, UK"
@@ -30,24 +35,30 @@ auto main() -> int
     "city": "New York"
   }
 ])";
-        const std::string expected = R"(name,city
+            const std::string expected = R"(name,city
 Ada,"London, UK"
 Grace,New York
 )";
-        const auto r = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, json_in);
-        suite.check(r.exit_code == 0, "ok/exits_zero");
-        suite.check(r.out == expected, "ok/output_matches");
-        suite.check(r.err.empty(), "ok/stderr_empty");
-    }
+            const auto result = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, json_in);
+            suite.check(result.exit_code == 0, "ok/exits_zero");
+            suite.check(result.out == expected, "ok/output_matches");
+            suite.check(result.err.empty(), "ok/stderr_empty");
+        }
 
-    // Malformed input: library throws, main catches, binary prints
-    // "json2csv: <message>" to stderr and exits non-zero.
+        // Malformed input: library throws, main catches, binary prints
+        // "json2csv: <message>" to stderr and exits non-zero.
+        {
+            const std::string bad_json = "not valid json at all";
+            const auto result = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, bad_json);
+            suite.check(result.exit_code != 0, "bad_input/exits_nonzero");
+            suite.check(result.err.contains("json2csv:"), "bad_input/stderr_prefixed");
+        }
+
+        return suite.finish();
+    }
+    catch (const std::exception& ex)
     {
-        const std::string bad_json = "not valid json at all";
-        const auto r = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, bad_json);
-        suite.check(r.exit_code != 0, "bad_input/exits_nonzero");
-        suite.check(r.err.contains("json2csv:"), "bad_input/stderr_prefixed");
+        std::cerr << "FATAL: " << ex.what() << "\n";
+        return EXIT_FAILURE;
     }
-
-    return suite.finish();
 }

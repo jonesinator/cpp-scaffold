@@ -7,6 +7,9 @@
 #include "test_support/expect.hpp"
 #include "test_support/subprocess.hpp"
 
+#include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <string>
 
 /// Path to the csv2json binary, injected by CMake.
@@ -16,15 +19,17 @@
 
 auto main() -> int
 {
-    expect::Suite suite("csv2json");
-
-    // Happy path.
+    try
     {
-        const std::string csv_in = R"(name,city
+        expect::Suite suite("csv2json");
+
+        // Happy path.
+        {
+            const std::string csv_in = R"(name,city
 Ada,"London, UK"
 Grace,New York
 )";
-        const std::string expected = R"([
+            const std::string expected = R"([
   {
     "name": "Ada",
     "city": "London, UK"
@@ -35,22 +40,28 @@ Grace,New York
   }
 ]
 )";
-        const auto r = subprocess::run(CSV2JSON_EXECUTABLE, {}, {}, csv_in);
-        suite.check(r.exit_code == 0, "ok/exits_zero");
-        suite.check(r.out == expected, "ok/output_matches");
-        suite.check(r.err.empty(), "ok/stderr_empty");
-    }
+            const auto result = subprocess::run(CSV2JSON_EXECUTABLE, {}, {}, csv_in);
+            suite.check(result.exit_code == 0, "ok/exits_zero");
+            suite.check(result.out == expected, "ok/output_matches");
+            suite.check(result.err.empty(), "ok/stderr_empty");
+        }
 
-    // Malformed input: unterminated quote → library throws, main catches,
-    // binary prints "csv2json: <message>" to stderr and exits non-zero.
-    {
-        const std::string bad_csv = R"(name,city
+        // Malformed input: unterminated quote → library throws, main catches,
+        // binary prints "csv2json: <message>" to stderr and exits non-zero.
+        {
+            const std::string bad_csv = R"(name,city
 Ada,"London
 )";
-        const auto r = subprocess::run(CSV2JSON_EXECUTABLE, {}, {}, bad_csv);
-        suite.check(r.exit_code != 0, "bad_input/exits_nonzero");
-        suite.check(r.err.contains("csv2json:"), "bad_input/stderr_prefixed");
-    }
+            const auto result = subprocess::run(CSV2JSON_EXECUTABLE, {}, {}, bad_csv);
+            suite.check(result.exit_code != 0, "bad_input/exits_nonzero");
+            suite.check(result.err.contains("csv2json:"), "bad_input/stderr_prefixed");
+        }
 
-    return suite.finish();
+        return suite.finish();
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "FATAL: " << ex.what() << "\n";
+        return EXIT_FAILURE;
+    }
 }

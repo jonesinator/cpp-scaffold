@@ -6,6 +6,8 @@
 
 #include "json/json.hpp"
 
+#include "core/table.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <format>
@@ -57,33 +59,33 @@ constexpr std::uint32_t hex_letter_offset = 10U;
 constexpr unsigned char control_char_limit = 0x20U;
 
 /**
- * @brief Append @p cp as a UTF-8 byte sequence to @p out.
- * @param cp  Unicode code point (assumed valid, not a surrogate).
+ * @brief Append @p codepoint as a UTF-8 byte sequence to @p out.
+ * @param codepoint  Unicode code point (assumed valid, not a surrogate).
  * @param out Output buffer.
  */
-void encode_utf8(std::uint32_t cp, std::string& out)
+void encode_utf8(std::uint32_t codepoint, std::string& out)
 {
-    if (cp < utf8_1byte_limit)
+    if (codepoint < utf8_1byte_limit)
     {
-        out.push_back(static_cast<char>(cp));
+        out.push_back(static_cast<char>(codepoint));
     }
-    else if (cp < utf8_2byte_limit)
+    else if (codepoint < utf8_2byte_limit)
     {
-        out.push_back(static_cast<char>(lead2_prefix | (cp >> utf8_shift_1)));
-        out.push_back(static_cast<char>(cont_prefix | (cp & cont_mask)));
+        out.push_back(static_cast<char>(lead2_prefix | (codepoint >> utf8_shift_1)));
+        out.push_back(static_cast<char>(cont_prefix | (codepoint & cont_mask)));
     }
-    else if (cp < utf8_3byte_limit)
+    else if (codepoint < utf8_3byte_limit)
     {
-        out.push_back(static_cast<char>(lead3_prefix | (cp >> utf8_shift_2)));
-        out.push_back(static_cast<char>(cont_prefix | ((cp >> utf8_shift_1) & cont_mask)));
-        out.push_back(static_cast<char>(cont_prefix | (cp & cont_mask)));
+        out.push_back(static_cast<char>(lead3_prefix | (codepoint >> utf8_shift_2)));
+        out.push_back(static_cast<char>(cont_prefix | ((codepoint >> utf8_shift_1) & cont_mask)));
+        out.push_back(static_cast<char>(cont_prefix | (codepoint & cont_mask)));
     }
     else
     {
-        out.push_back(static_cast<char>(lead4_prefix | (cp >> utf8_shift_3)));
-        out.push_back(static_cast<char>(cont_prefix | ((cp >> utf8_shift_2) & cont_mask)));
-        out.push_back(static_cast<char>(cont_prefix | ((cp >> utf8_shift_1) & cont_mask)));
-        out.push_back(static_cast<char>(cont_prefix | (cp & cont_mask)));
+        out.push_back(static_cast<char>(lead4_prefix | (codepoint >> utf8_shift_3)));
+        out.push_back(static_cast<char>(cont_prefix | ((codepoint >> utf8_shift_2) & cont_mask)));
+        out.push_back(static_cast<char>(cont_prefix | ((codepoint >> utf8_shift_1) & cont_mask)));
+        out.push_back(static_cast<char>(cont_prefix | (codepoint & cont_mask)));
     }
 }
 
@@ -121,8 +123,8 @@ class Parser
     {
         while (pos_ < src_.size())
         {
-            const char c = src_.at(pos_);
-            if (c != ' ' && c != '\t' && c != '\n' && c != '\r')
+            const char chr = src_.at(pos_);
+            if (chr != ' ' && chr != '\t' && chr != '\n' && chr != '\r')
             {
                 break;
             }
@@ -140,29 +142,29 @@ class Parser
         return src_.at(pos_);
     }
 
-    void expect(char c)
+    void expect(char chr)
     {
         const char got = peek();
-        if (got != c)
+        if (got != chr)
         {
-            fail(std::format("expected '{}' but got '{}'", c, got));
+            fail(std::format("expected '{}' but got '{}'", chr, got));
         }
         ++pos_;
     }
 
-    [[nodiscard]] auto hex_value(char c) const -> std::uint32_t
+    [[nodiscard]] auto hex_value(char chr) const -> std::uint32_t
     {
-        if (c >= '0' && c <= '9')
+        if (chr >= '0' && chr <= '9')
         {
-            return static_cast<std::uint32_t>(c - '0');
+            return static_cast<std::uint32_t>(chr - '0');
         }
-        if (c >= 'a' && c <= 'f')
+        if (chr >= 'a' && chr <= 'f')
         {
-            return static_cast<std::uint32_t>(c - 'a') + hex_letter_offset;
+            return static_cast<std::uint32_t>(chr - 'a') + hex_letter_offset;
         }
-        if (c >= 'A' && c <= 'F')
+        if (chr >= 'A' && chr <= 'F')
         {
-            return static_cast<std::uint32_t>(c - 'A') + hex_letter_offset;
+            return static_cast<std::uint32_t>(chr - 'A') + hex_letter_offset;
         }
         fail("invalid hex digit in \\u escape");
     }
@@ -184,8 +186,8 @@ class Parser
 
     void parse_unicode_escape(std::string& out)
     {
-        std::uint32_t cp = parse_hex4();
-        if (cp >= surrogate_high_min && cp <= surrogate_high_max)
+        std::uint32_t codepoint = parse_hex4();
+        if (codepoint >= surrogate_high_min && codepoint <= surrogate_high_max)
         {
             if (pos_ + 1 >= src_.size() || src_.at(pos_) != '\\' || src_.at(pos_ + 1) != 'u')
             {
@@ -197,13 +199,14 @@ class Parser
             {
                 fail("invalid low surrogate in \\u escape");
             }
-            cp = surrogate_base + ((cp - surrogate_high_min) << surrogate_shift) + (low - surrogate_low_min);
+            codepoint =
+                surrogate_base + ((codepoint - surrogate_high_min) << surrogate_shift) + (low - surrogate_low_min);
         }
-        else if (cp >= surrogate_low_min && cp <= surrogate_low_max)
+        else if (codepoint >= surrogate_low_min && codepoint <= surrogate_low_max)
         {
             fail("unexpected low surrogate in \\u escape");
         }
-        encode_utf8(cp, out);
+        encode_utf8(codepoint, out);
     }
 
     void parse_escape(std::string& out)
@@ -212,9 +215,9 @@ class Parser
         {
             fail("unterminated escape sequence");
         }
-        const char c = src_.at(pos_);
+        const char chr = src_.at(pos_);
         ++pos_;
-        switch (c)
+        switch (chr)
         {
         case '"':
             out.push_back('"');
@@ -244,7 +247,7 @@ class Parser
             parse_unicode_escape(out);
             break;
         default:
-            fail(std::format("invalid escape character '\\{}'", c));
+            fail(std::format("invalid escape character '\\{}'", chr));
         }
     }
 
@@ -254,24 +257,24 @@ class Parser
         std::string out;
         while (pos_ < src_.size())
         {
-            const char c = src_.at(pos_);
-            if (c == '"')
+            const char chr = src_.at(pos_);
+            if (chr == '"')
             {
                 ++pos_;
                 return out;
             }
-            if (c == '\\')
+            if (chr == '\\')
             {
                 ++pos_;
                 parse_escape(out);
             }
-            else if (static_cast<unsigned char>(c) < control_char_limit)
+            else if (static_cast<unsigned char>(chr) < control_char_limit)
             {
                 fail("unescaped control character in string");
             }
             else
             {
-                out.push_back(c);
+                out.push_back(chr);
                 ++pos_;
             }
         }
@@ -338,26 +341,26 @@ void row_from_object(const std::vector<std::pair<std::string, std::string>>& pai
     row.assign(header_index.size(), std::string{});
     for (const auto& [key, value] : pairs)
     {
-        auto it = header_index.find(key);
-        if (it == header_index.end())
+        auto iter = header_index.find(key);
+        if (iter == header_index.end())
         {
             throw std::runtime_error(std::format("json: object {} has unexpected key '{}'", object_index, key));
         }
-        row.at(it->second) = value;
+        row.at(iter->second) = value;
     }
 }
 
 /**
- * @brief Append the JSON escaping of @p s (including surrounding quotes).
+ * @brief Append the JSON escaping of @p str (including surrounding quotes).
  * @param out Output buffer.
- * @param s   Raw string.
+ * @param str Raw string.
  */
-void escape_string(std::string& out, std::string_view s)
+void escape_string(std::string& out, std::string_view str)
 {
     out.push_back('"');
-    for (const char c : s)
+    for (const char chr : str)
     {
-        switch (c)
+        switch (chr)
         {
         case '"':
             out.append("\\\"");
@@ -381,13 +384,13 @@ void escape_string(std::string& out, std::string_view s)
             out.append("\\t");
             break;
         default:
-            if (static_cast<unsigned char>(c) < control_char_limit)
+            if (static_cast<unsigned char>(chr) < control_char_limit)
             {
-                out.append(std::format("\\u{:04x}", static_cast<unsigned>(c)));
+                out.append(std::format("\\u{:04x}", static_cast<unsigned>(chr)));
             }
             else
             {
-                out.push_back(c);
+                out.push_back(chr);
             }
             break;
         }
@@ -399,9 +402,9 @@ void escape_string(std::string& out, std::string_view s)
 
 auto parse(std::string_view text) -> core::Table
 {
-    Parser p(text);
-    p.expect('[');
-    if (p.peek() == ']')
+    Parser parser(text);
+    parser.expect('[');
+    if (parser.peek() == ']')
     {
         throw std::runtime_error("json: empty top-level array");
     }
@@ -412,11 +415,11 @@ auto parse(std::string_view text) -> core::Table
 
     while (true)
     {
-        auto pairs = p.parse_object_pairs();
+        auto pairs = parser.parse_object_pairs();
         if (object_index == 0)
         {
             table.headers.reserve(pairs.size());
-            for (const auto& [key, _] : pairs)
+            for (const auto& [key, unused] : pairs)
             {
                 header_index.emplace(key, table.headers.size());
                 table.headers.push_back(key);
@@ -427,23 +430,24 @@ auto parse(std::string_view text) -> core::Table
         table.rows.push_back(std::move(row));
         ++object_index;
 
-        const char next = p.peek();
+        const char next = parser.peek();
         if (next == ',')
         {
-            p.advance();
+            parser.advance();
             continue;
         }
         if (next == ']')
         {
-            p.advance();
+            parser.advance();
             break;
         }
-        throw std::runtime_error(std::format("json: expected ',' or ']' but got '{}' at offset {}", next, p.offset()));
+        throw std::runtime_error(
+            std::format("json: expected ',' or ']' but got '{}' at offset {}", next, parser.offset()));
     }
 
-    if (!p.at_end())
+    if (!parser.at_end())
     {
-        throw std::runtime_error(std::format("json: trailing content at offset {}", p.offset()));
+        throw std::runtime_error(std::format("json: trailing content at offset {}", parser.offset()));
     }
     return table;
 }
@@ -452,15 +456,15 @@ auto write(const core::Table& table) -> std::string
 {
     std::string out;
     out.push_back('[');
-    for (std::size_t r = 0; r < table.rows.size(); ++r)
+    for (std::size_t row = 0; row < table.rows.size(); ++row)
     {
-        out.append(r == 0 ? "\n  {" : ",\n  {");
-        for (std::size_t c = 0; c < table.headers.size(); ++c)
+        out.append(row == 0 ? "\n  {" : ",\n  {");
+        for (std::size_t col = 0; col < table.headers.size(); ++col)
         {
-            out.append(c == 0 ? "\n    " : ",\n    ");
-            escape_string(out, table.headers.at(c));
+            out.append(col == 0 ? "\n    " : ",\n    ");
+            escape_string(out, table.headers.at(col));
             out.append(": ");
-            escape_string(out, table.rows.at(r).at(c));
+            escape_string(out, table.rows.at(row).at(col));
         }
         out.append("\n  }");
     }

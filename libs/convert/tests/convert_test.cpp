@@ -7,6 +7,9 @@
 #include "convert/convert.hpp"
 #include "test_support/expect.hpp"
 
+#include <cstdlib>
+#include <exception>
+#include <iostream>
 #include <string>
 
 namespace
@@ -42,8 +45,16 @@ auto test_json_round_trip_via_csv() -> bool
 
 auto main() -> int
 {
-    expect::Suite suite("convert");
-    suite.check(test_csv_round_trip_via_json(), "csv_round_trip_via_json");
-    suite.check(test_json_round_trip_via_csv(), "json_round_trip_via_csv");
-    return suite.finish();
+    try
+    {
+        expect::Suite suite("convert");
+        suite.check(test_csv_round_trip_via_json(), "csv_round_trip_via_json");
+        suite.check(test_json_round_trip_via_csv(), "json_round_trip_via_csv");
+        return suite.finish();
+    }
+    catch (const std::exception& ex)
+    {
+        std::cerr << "FATAL: " << ex.what() << "\n";
+        return EXIT_FAILURE;
+    }
 }

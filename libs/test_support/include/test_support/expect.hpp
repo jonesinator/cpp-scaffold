@@ -113,21 +113,21 @@ inline void fail_test_when(bool condition, const std::string& msg)
 }
 
 /**
- * @brief Assert that @p fn throws a std::runtime_error.
+ * @brief Assert that @p func throws a std::runtime_error.
  *
- * Calls fail_test() if @p fn returns without throwing. Returns true
+ * Calls fail_test() if @p func returns without throwing. Returns true
  * on a caught runtime_error so callers can write
  * `return expect_throws([] { ... });`.
  *
  * Takes std::function (not a template) so there is a single function body
- * in the binary. Both the "fn throws" and "fn doesn't throw" paths get
+ * in the binary. Both the "func throws" and "func doesn't throw" paths get
  * exercised through that one body, giving 100% coverage per instantiation.
  */
-inline auto expect_throws(const std::function<void()>& fn) -> bool
+inline auto expect_throws(const std::function<void()>& func) -> bool
 {
     try
     {
-        fn();
+        func();
     }
     catch (const std::runtime_error&)
     {

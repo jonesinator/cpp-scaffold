@@ -52,21 +52,21 @@ struct Result
 
 /**
  * @brief Read the entire contents of a file descriptor into a string.
- * @param fd File descriptor to read from.
+ * @param pipe_fd File descriptor to read from.
  * @return The contents as a string.
  */
-inline auto drain(int fd) -> std::string
+inline auto drain(int pipe_fd) -> std::string
 {
     std::string buf;
     std::array<char, read_buffer_size> chunk{};
     for (;;)
     {
-        auto n = ::read(fd, chunk.data(), chunk.size());
-        if (n <= 0)
+        auto count = ::read(pipe_fd, chunk.data(), chunk.size());
+        if (count <= 0)
         {
             break;
         }
-        buf.append(chunk.data(), static_cast<std::size_t>(n));
+        buf.append(chunk.data(), static_cast<std::size_t>(count));
     }
     return buf;
 }
@@ -92,9 +92,9 @@ class OwnedCStrVec
     }
 
     /// Access the nth pointer (bounds-checked).
-    auto at(std::size_t i) -> char*
+    auto at(std::size_t idx) -> char*
     {
-        return ptrs_.at(i);
+        return ptrs_.at(idx);
     }
 
   private:
@@ -114,9 +114,9 @@ inline auto to_cstr_vec(std::vector<std::string> strings) -> OwnedCStrVec
     OwnedCStrVec result;
     result.storage_ = std::move(strings);
     result.ptrs_.reserve(result.storage_.size() + 1);
-    for (auto& s : result.storage_)
+    for (auto& str : result.storage_)
     {
-        result.ptrs_.push_back(s.data());
+        result.ptrs_.push_back(str.data());
     }
     result.ptrs_.push_back(nullptr);
     return result;
@@ -158,20 +158,20 @@ child_exec(std::array<int, 2>& in_pipe, std::array<int, 2>& out_pipe, std::array
 } // LCOV_EXCL_STOP
 
 /**
- * @brief Write @p data to @p fd, retrying on partial writes.
- * @param fd   File descriptor to write to.
- * @param data Bytes to write.
+ * @brief Write @p data to @p pipe_fd, retrying on partial writes.
+ * @param pipe_fd File descriptor to write to.
+ * @param data    Bytes to write.
  */
-inline void write_all(int fd, std::string_view data)
+inline void write_all(int pipe_fd, std::string_view data)
 {
     while (!data.empty())
     {
-        const auto n = ::write(fd, data.data(), data.size());
-        if (n <= 0)
+        const auto bytes_written = ::write(pipe_fd, data.data(), data.size());
+        if (bytes_written <= 0)
         {
             break;
         }
-        data.remove_prefix(static_cast<std::size_t>(n));
+        data.remove_prefix(static_cast<std::size_t>(bytes_written));
     }
 }
 
