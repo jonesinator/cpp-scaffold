@@ -100,7 +100,6 @@ struct TestCase
 
 } // namespace
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
 auto main() -> int
 {
     try
