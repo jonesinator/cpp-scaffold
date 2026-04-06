@@ -119,13 +119,14 @@ auto test_write_all_broken_pipe_returns_early() -> bool
 
 auto test_run_true_exits_zero() -> bool
 {
-    auto result = subprocess::run("/bin/true");
+    // Use sh -c instead of /bin/true directly — /bin/true doesn't exist in Nix sandboxes.
+    auto result = subprocess::run("/bin/sh", {"-c", "true"});
     return result.exit_code == 0 && result.out.empty() && result.err.empty();
 }
 
 auto test_run_false_exits_nonzero() -> bool
 {
-    auto result = subprocess::run("/bin/false");
+    auto result = subprocess::run("/bin/sh", {"-c", "false"});
     return result.exit_code != 0 && result.exit_code != -1;
 }
 
@@ -144,8 +145,9 @@ auto test_run_signal_termination_returns_minus_one() -> bool
 
 auto test_run_stdin_piped_to_cat() -> bool
 {
+    // Use sh -c instead of /bin/cat directly — /bin/cat doesn't exist in Nix sandboxes.
     const std::string_view payload = "piped through cat\n";
-    auto result = subprocess::run("/bin/cat", {}, {}, payload);
+    auto result = subprocess::run("/bin/sh", {"-c", "cat"}, {}, payload);
     return result.exit_code == 0 && result.out == payload && result.err.empty();
 }
 

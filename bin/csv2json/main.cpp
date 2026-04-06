@@ -31,7 +31,8 @@ auto main() -> int
     }
     catch (const std::exception& e)
     {
-        std::println(std::cerr, "csv2json: {}", e.what());
+        std::println(std::cerr, "csv2json: {}",
+                     e.what()); // NOLINT(misc-include-cleaner) clang-tidy 19 can't map std::println to <print>
         return EXIT_FAILURE;
     }
 }

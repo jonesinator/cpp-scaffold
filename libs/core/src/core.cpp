@@ -15,7 +15,7 @@ namespace core
 
 void println(std::string_view msg)
 {
-    std::println(std::cout, "{}", msg);
+    std::println(std::cout, "{}", msg); // NOLINT(misc-include-cleaner) clang-tidy 19 can't map std::println to <print>
 }
 
 } // namespace core
