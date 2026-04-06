@@ -4,7 +4,6 @@
  * @brief Implementation of the csv library.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,misc-non-private-member-variables-in-classes)
 #include "csv/csv.hpp"
 
 #include <cstddef>
@@ -42,10 +41,10 @@ struct Cursor
  */
 auto consume_quoted_char(Cursor& cur, std::string& field) -> bool
 {
-    const char c = cur.text[cur.pos];
+    const char c = cur.text.at(cur.pos);
     if (c == '"')
     {
-        if (cur.pos + 1 < cur.text.size() && cur.text[cur.pos + 1] == '"')
+        if (cur.pos + 1 < cur.text.size() && cur.text.at(cur.pos + 1) == '"')
         {
             field.push_back('"');
             cur.pos += 2;
@@ -87,7 +86,7 @@ auto parse_row(Cursor& cur) -> std::vector<std::string>
             in_quotes = consume_quoted_char(cur, field);
             continue;
         }
-        const char c = cur.text[cur.pos];
+        const char c = cur.text.at(cur.pos);
         if (c == '"' && field.empty())
         {
             in_quotes = true;
@@ -125,11 +124,11 @@ auto parse_row(Cursor& cur) -> std::vector<std::string>
  */
 void skip_line_terminator(Cursor& cur)
 {
-    if (cur.pos < cur.text.size() && cur.text[cur.pos] == '\r')
+    if (cur.pos < cur.text.size() && cur.text.at(cur.pos) == '\r')
     {
         ++cur.pos;
     }
-    if (cur.pos < cur.text.size() && cur.text[cur.pos] == '\n')
+    if (cur.pos < cur.text.size() && cur.text.at(cur.pos) == '\n')
     {
         ++cur.pos;
         ++cur.line;
@@ -172,7 +171,7 @@ void write_field(std::string& out, std::string_view s)
 
 } // namespace
 
-auto parse(std::string_view text) -> core::Table // NOLINT(misc-use-internal-linkage)
+auto parse(std::string_view text) -> core::Table
 {
     if (text.empty())
     {
@@ -200,7 +199,7 @@ auto parse(std::string_view text) -> core::Table // NOLINT(misc-use-internal-lin
     return table;
 }
 
-auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-linkage)
+auto write(const core::Table& table) -> std::string
 {
     std::string out;
 
@@ -212,7 +211,7 @@ auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-
             {
                 out.push_back(',');
             }
-            write_field(out, row[i]);
+            write_field(out, row.at(i));
         }
         out.push_back('\n');
     };
@@ -226,4 +225,3 @@ auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-
 }
 
 } // namespace csv
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,misc-non-private-member-variables-in-classes)

@@ -7,7 +7,6 @@
  * captures stdout, stderr, and the exit code.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 #ifndef TEST_SUPPORT_SUBPROCESS_HPP
 #define TEST_SUPPORT_SUBPROCESS_HPP
 
@@ -73,20 +72,53 @@ inline auto drain(int fd) -> std::string
 }
 
 /**
- * @brief Build a vector of C string pointers from a vector of strings.
- * @param strings The input strings.
- * @return A null-terminated vector of const char pointers.
+ * @brief Owns a vector of strings and a parallel null-terminated char* array.
+ *
+ * Keeps the string storage alive so the pointers in @c ptrs never dangle.
  */
-inline auto to_cstr_vec(const std::vector<std::string>& strings) -> std::vector<char*>
+class OwnedCStrVec
 {
-    std::vector<char*> result;
-    result.reserve(strings.size() + 1);
-    for (const auto& s : strings)
+  public:
+    /// Return the raw pointer array suitable for execv/execve.
+    auto data() -> char**
     {
-        // POSIX exec requires char* const[], but does not modify the strings.
-        result.push_back(const_cast<char*>(s.c_str())); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+        return ptrs_.data();
     }
-    result.push_back(nullptr);
+
+    /// Number of entries (excluding the null terminator).
+    [[nodiscard]] auto size() const -> std::size_t
+    {
+        return storage_.size();
+    }
+
+    /// Access the nth pointer (bounds-checked).
+    auto at(std::size_t i) -> char*
+    {
+        return ptrs_.at(i);
+    }
+
+  private:
+    std::vector<std::string> storage_; ///< Owned copies of the strings.
+    std::vector<char*> ptrs_;          ///< Null-terminated pointer array into @c storage_.
+
+    friend auto to_cstr_vec(std::vector<std::string> strings) -> OwnedCStrVec;
+};
+
+/**
+ * @brief Build an owning C-string vector from a vector of strings.
+ * @param strings The input strings (taken by value to own them).
+ * @return An OwnedCStrVec whose @c ptrs point into its own @c storage.
+ */
+inline auto to_cstr_vec(std::vector<std::string> strings) -> OwnedCStrVec
+{
+    OwnedCStrVec result;
+    result.storage_ = std::move(strings);
+    result.ptrs_.reserve(result.storage_.size() + 1);
+    for (auto& s : result.storage_)
+    {
+        result.ptrs_.push_back(s.data());
+    }
+    result.ptrs_.push_back(nullptr);
     return result;
 }
 
@@ -101,28 +133,26 @@ inline auto to_cstr_vec(const std::vector<std::string>& strings) -> std::vector<
  */
 // LCOV_EXCL_START
 SUBPROCESS_NO_COVERAGE __attribute__((noreturn)) inline void
-child_exec(std::array<int, 2>& in_pipe,  // NOLINT(bugprone-easily-swappable-parameters)
-           std::array<int, 2>& out_pipe, // NOLINT(bugprone-easily-swappable-parameters)
-           std::array<int, 2>& err_pipe, const std::string& exe, std::vector<char*>& argv, std::vector<char*>& envp,
-           bool inherit_env)
+child_exec(std::array<int, 2>& in_pipe, std::array<int, 2>& out_pipe, std::array<int, 2>& err_pipe,
+           const std::string& exe, char** argv, char** envp, bool inherit_env)
 {
-    ::close(in_pipe[1]);
-    ::close(out_pipe[0]);
-    ::close(err_pipe[0]);
-    ::dup2(in_pipe[0], STDIN_FILENO);
-    ::dup2(out_pipe[1], STDOUT_FILENO);
-    ::dup2(err_pipe[1], STDERR_FILENO);
-    ::close(in_pipe[0]);
-    ::close(out_pipe[1]);
-    ::close(err_pipe[1]);
+    ::close(in_pipe.at(1));
+    ::close(out_pipe.at(0));
+    ::close(err_pipe.at(0));
+    ::dup2(in_pipe.at(0), STDIN_FILENO);
+    ::dup2(out_pipe.at(1), STDOUT_FILENO);
+    ::dup2(err_pipe.at(1), STDERR_FILENO);
+    ::close(in_pipe.at(0));
+    ::close(out_pipe.at(1));
+    ::close(err_pipe.at(1));
 
     if (inherit_env)
     {
-        ::execv(exe.c_str(), argv.data());
+        ::execv(exe.c_str(), argv);
     }
     else
     {
-        ::execve(exe.c_str(), argv.data(), envp.data());
+        ::execve(exe.c_str(), argv, envp);
     }
     ::_exit(exec_failed_exit_code);
 } // LCOV_EXCL_STOP
@@ -156,23 +186,23 @@ inline void write_all(int fd, std::string_view data)
 inline auto parent_wait(pid_t pid, std::array<int, 2>& in_pipe, std::array<int, 2>& out_pipe,
                         std::array<int, 2>& err_pipe, std::string_view stdin_data) -> Result
 {
-    ::close(in_pipe[0]);
-    ::close(out_pipe[1]);
-    ::close(err_pipe[1]);
+    ::close(in_pipe.at(0));
+    ::close(out_pipe.at(1));
+    ::close(err_pipe.at(1));
 
     // If the child exits before consuming all stdin, write() will get EPIPE
     // unless we ignore SIGPIPE. This is safe because write_all() also bails
     // on short/error returns.
     auto* prev_sigpipe = std::signal(SIGPIPE, SIG_IGN);
-    write_all(in_pipe[1], stdin_data);
-    ::close(in_pipe[1]);
+    write_all(in_pipe.at(1), stdin_data);
+    ::close(in_pipe.at(1));
     (void)std::signal(SIGPIPE, prev_sigpipe);
 
-    auto out = drain(out_pipe[0]);
-    auto err = drain(err_pipe[0]);
+    auto out = drain(out_pipe.at(0));
+    auto err = drain(err_pipe.at(0));
 
-    ::close(out_pipe[0]);
-    ::close(err_pipe[0]);
+    ::close(out_pipe.at(0));
+    ::close(err_pipe.at(0));
 
     int status = 0;
     ::waitpid(pid, &status, 0);
@@ -198,9 +228,9 @@ inline auto parent_wait(pid_t pid, std::array<int, 2>& in_pipe, std::array<int, 
  * fork() + the child dispatch — code paths that coverage tools cannot
  * observe. The parent-side logic is in parent_wait(), which IS instrumented.
  */
-SUBPROCESS_NO_COVERAGE inline auto
-run(const std::string& exe, const std::vector<std::string>& args = {}, // NOLINT(bugprone-easily-swappable-parameters)
-    const std::vector<std::string>& env = {}, std::string_view stdin_data = {}) -> Result
+SUBPROCESS_NO_COVERAGE inline auto run(const std::string& exe, const std::vector<std::string>& args = {},
+                                       const std::vector<std::string>& env = {}, std::string_view stdin_data = {})
+    -> Result
 {
     // Build argv and envp
     std::vector<std::string> argv_strings;
@@ -223,7 +253,7 @@ run(const std::string& exe, const std::vector<std::string>& args = {}, // NOLINT
     const pid_t pid = ::fork();
     if (pid == 0)
     {
-        child_exec(in_pipe, out_pipe, err_pipe, exe, argv, envp, env.empty()); // LCOV_EXCL_LINE
+        child_exec(in_pipe, out_pipe, err_pipe, exe, argv.data(), envp.data(), env.empty()); // LCOV_EXCL_LINE
     }
 
     return parent_wait(pid, in_pipe, out_pipe, err_pipe, stdin_data);
@@ -232,4 +262,3 @@ run(const std::string& exe, const std::vector<std::string>& args = {}, // NOLINT
 } // namespace subprocess
 
 #endif // TEST_SUPPORT_SUBPROCESS_HPP
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

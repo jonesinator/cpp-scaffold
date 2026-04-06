@@ -13,12 +13,12 @@
 namespace convert
 {
 
-auto csv_to_json(std::string_view csv_text) -> std::string // NOLINT(misc-use-internal-linkage)
+auto csv_to_json(std::string_view csv_text) -> std::string
 {
     return json::write(csv::parse(csv_text));
 }
 
-auto json_to_csv(std::string_view json_text) -> std::string // NOLINT(misc-use-internal-linkage)
+auto json_to_csv(std::string_view json_text) -> std::string
 {
     return csv::write(json::parse(json_text));
 }

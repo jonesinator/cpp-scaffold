@@ -33,8 +33,7 @@ namespace expect
 class Suite
 {
   public:
-    explicit Suite(std::string_view suite_name,
-                   std::ostream& out_stream = std::cout, // NOLINT(bugprone-easily-swappable-parameters)
+    explicit Suite(std::string_view suite_name, std::ostream& out_stream = std::cout,
                    std::ostream& err_stream = std::cerr)
         : name_(suite_name), out_(&out_stream), err_(&err_stream)
     {

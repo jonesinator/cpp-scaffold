@@ -4,7 +4,6 @@
  * @brief Self-tests for subprocess.hpp and expect.hpp.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 #include "test_support/expect.hpp"
 #include "test_support/subprocess.hpp"
 
@@ -25,19 +24,19 @@ namespace
 auto test_to_cstr_vec_empty() -> bool
 {
     auto v = subprocess::to_cstr_vec({});
-    return v.size() == 1 && v[0] == nullptr;
+    return v.size() == 0 && v.at(0) == nullptr;
 }
 
 auto test_to_cstr_vec_populated() -> bool
 {
     const std::vector<std::string> in{"a", "bb", "ccc"};
     auto v = subprocess::to_cstr_vec(in);
-    expect::fail_test_when(v.size() != 4 || v[3] != nullptr, "to_cstr_vec: wrong size or missing nullptr sentinel");
-    // Each pointer must reference the source string's storage.
-    for (std::size_t i = 0; i < in.size(); ++i)
+    expect::fail_test_when(v.size() != 3 || v.at(3) != nullptr, "to_cstr_vec: wrong size or missing nullptr sentinel");
+    // Each pointer must reference the owned storage's string data.
+    for (std::size_t i = 0; i < v.size(); ++i)
     {
-        expect::fail_test_when(v[i] != in[i].c_str() || std::string_view{v[i]} != in[i],
-                               "to_cstr_vec: pointer does not reference source string");
+        expect::fail_test_when(std::string_view{v.at(i)} != in.at(i),
+                               "to_cstr_vec: pointer content does not match input");
     }
     return true;
 }
@@ -49,10 +48,10 @@ auto test_drain_reads_pipe_content() -> bool
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
     const std::string_view msg = "hello drain";
-    ::write(fds[1], msg.data(), msg.size());
-    ::close(fds[1]);
-    auto result = subprocess::drain(fds[0]);
-    ::close(fds[0]);
+    ::write(fds.at(1), msg.data(), msg.size());
+    ::close(fds.at(1));
+    auto result = subprocess::drain(fds.at(0));
+    ::close(fds.at(0));
     return result == msg;
 }
 
@@ -60,9 +59,9 @@ auto test_drain_empty_pipe_returns_empty() -> bool
 {
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
-    ::close(fds[1]); // immediate EOF
-    auto result = subprocess::drain(fds[0]);
-    ::close(fds[0]);
+    ::close(fds.at(1)); // immediate EOF
+    auto result = subprocess::drain(fds.at(0));
+    ::close(fds.at(0));
     return result.empty();
 }
 
@@ -75,10 +74,10 @@ auto test_drain_reads_large_payload() -> bool
     // Write from a background-ish pattern: write then close.
     // For a ~12KB payload, pipe buffer (64KB on Linux) accommodates it in one
     // write without blocking.
-    ::write(fds[1], big.data(), big.size());
-    ::close(fds[1]);
-    auto result = subprocess::drain(fds[0]);
-    ::close(fds[0]);
+    ::write(fds.at(1), big.data(), big.size());
+    ::close(fds.at(1));
+    auto result = subprocess::drain(fds.at(0));
+    ::close(fds.at(0));
     return result == big;
 }
 
@@ -89,10 +88,10 @@ auto test_write_all_happy_path() -> bool
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
     const std::string_view msg = "write_all payload";
-    subprocess::write_all(fds[1], msg);
-    ::close(fds[1]);
-    auto got = subprocess::drain(fds[0]);
-    ::close(fds[0]);
+    subprocess::write_all(fds.at(1), msg);
+    ::close(fds.at(1));
+    auto got = subprocess::drain(fds.at(0));
+    ::close(fds.at(0));
     return got == msg;
 }
 
@@ -102,11 +101,11 @@ auto test_write_all_broken_pipe_returns_early() -> bool
     // write_all must break out of its loop rather than spin.
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
-    ::close(fds[0]);
+    ::close(fds.at(0));
     auto* prev = std::signal(SIGPIPE, SIG_IGN);
-    subprocess::write_all(fds[1], "data that cannot be delivered");
+    subprocess::write_all(fds.at(1), "data that cannot be delivered");
     (void)std::signal(SIGPIPE, prev);
-    ::close(fds[1]);
+    ::close(fds.at(1));
     return true; // survival = success (no infinite loop, no crash)
 }
 
@@ -309,4 +308,3 @@ auto main() -> int
     s.check(test_expect_throws_calls_fail_test_on_no_throw(), "expect_throws/calls_fail_test_on_no_throw");
     return s.finish();
 }
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

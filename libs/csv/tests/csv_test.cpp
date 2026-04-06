@@ -4,7 +4,6 @@
  * @brief Unit tests for the csv library.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 #include "csv/csv.hpp"
 #include "test_support/expect.hpp"
 
@@ -19,39 +18,39 @@ auto test_parse_simple() -> bool
 {
     const auto t = csv::parse("a,b\n1,2\n3,4\n");
     return t.headers == std::vector<std::string>{"a", "b"} && t.rows.size() == 2 &&
-           t.rows[0] == std::vector<std::string>{"1", "2"} && t.rows[1] == std::vector<std::string>{"3", "4"};
+           t.rows.at(0) == std::vector<std::string>{"1", "2"} && t.rows.at(1) == std::vector<std::string>{"3", "4"};
 }
 
 auto test_parse_quoted() -> bool
 {
     const auto t = csv::parse("a,b\n\"he said \"\"hi\"\"\",\"x,y\"\n");
-    return t.rows.size() == 1 && t.rows[0][0] == "he said \"hi\"" && t.rows[0][1] == "x,y";
+    return t.rows.size() == 1 && t.rows.at(0).at(0) == "he said \"hi\"" && t.rows.at(0).at(1) == "x,y";
 }
 
 auto test_parse_empty_field() -> bool
 {
     const auto t = csv::parse("a,b,c\n1,,3\n,,\n");
-    return t.rows.size() == 2 && t.rows[0] == std::vector<std::string>{"1", "", "3"} &&
-           t.rows[1] == std::vector<std::string>{"", "", ""};
+    return t.rows.size() == 2 && t.rows.at(0) == std::vector<std::string>{"1", "", "3"} &&
+           t.rows.at(1) == std::vector<std::string>{"", "", ""};
 }
 
 auto test_parse_crlf() -> bool
 {
     const auto t = csv::parse("a,b\r\n1,2\r\n");
     return t.headers == std::vector<std::string>{"a", "b"} && t.rows.size() == 1 &&
-           t.rows[0] == std::vector<std::string>{"1", "2"};
+           t.rows.at(0) == std::vector<std::string>{"1", "2"};
 }
 
 auto test_parse_no_trailing_newline() -> bool
 {
     const auto t = csv::parse("a,b\n1,2");
-    return t.rows.size() == 1 && t.rows[0] == std::vector<std::string>{"1", "2"};
+    return t.rows.size() == 1 && t.rows.at(0) == std::vector<std::string>{"1", "2"};
 }
 
 auto test_parse_embedded_newline() -> bool
 {
     const auto t = csv::parse("a,b\n\"line1\nline2\",x\n");
-    return t.rows.size() == 1 && t.rows[0][0] == "line1\nline2" && t.rows[0][1] == "x";
+    return t.rows.size() == 1 && t.rows.at(0).at(0) == "line1\nline2" && t.rows.at(0).at(1) == "x";
 }
 
 auto test_write_quotes_when_needed() -> bool
@@ -120,4 +119,3 @@ auto main() -> int
     }
     return suite.finish();
 }
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

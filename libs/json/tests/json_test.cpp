@@ -4,7 +4,6 @@
  * @brief Unit tests for the json library.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 #include "test_support/expect.hpp"
 
 #include "json/json.hpp"
@@ -19,33 +18,33 @@ auto test_parse_simple() -> bool
 {
     const auto t = json::parse(R"([{"a":"1","b":"2"},{"a":"3","b":"4"}])");
     return t.headers == std::vector<std::string>{"a", "b"} && t.rows.size() == 2 &&
-           t.rows[0] == std::vector<std::string>{"1", "2"} && t.rows[1] == std::vector<std::string>{"3", "4"};
+           t.rows.at(0) == std::vector<std::string>{"1", "2"} && t.rows.at(1) == std::vector<std::string>{"3", "4"};
 }
 
 auto test_parse_whitespace() -> bool
 {
     const auto t = json::parse("[\n  { \"a\" : \"1\" , \"b\":\"2\"  }\n]");
-    return t.rows.size() == 1 && t.rows[0] == std::vector<std::string>{"1", "2"};
+    return t.rows.size() == 1 && t.rows.at(0) == std::vector<std::string>{"1", "2"};
 }
 
 auto test_parse_escapes() -> bool
 {
     const auto t = json::parse(R"([{"s":"a\nb\tc\"d\\e\/f\b\r\f"}])");
-    return t.rows[0][0] == std::string{"a\nb\tc\"d\\e/f\b\r\f"};
+    return t.rows.at(0).at(0) == std::string{"a\nb\tc\"d\\e/f\b\r\f"};
 }
 
 auto test_parse_unicode_bmp() -> bool
 {
     const auto t = json::parse(R"([{"s":"\u00e9"}])");
     // U+00E9 "é" — two bytes in UTF-8.
-    return t.rows[0][0] == "\xc3\xa9";
+    return t.rows.at(0).at(0) == "\xc3\xa9";
 }
 
 auto test_parse_unicode_surrogate_pair() -> bool
 {
     // U+1F600 GRINNING FACE — four bytes in UTF-8.
     const auto t = json::parse(R"([{"s":"\uD83D\uDE00"}])");
-    return t.rows[0][0] == "\xf0\x9f\x98\x80";
+    return t.rows.at(0).at(0) == "\xf0\x9f\x98\x80";
 }
 
 auto test_write_pretty() -> bool
@@ -122,14 +121,14 @@ auto test_parse_unicode_1byte() -> bool
 {
     // U+0041 'A' — single-byte UTF-8, exercises encode_utf8's cp < 0x80 branch.
     const auto t = json::parse(R"([{"s":"\u0041"}])");
-    return t.rows[0][0] == "A";
+    return t.rows.at(0).at(0) == "A";
 }
 
 auto test_parse_unicode_3byte() -> bool
 {
     // U+2603 ☃ — three-byte UTF-8 (0xE2 0x98 0x83).
     const auto t = json::parse(R"([{"s":"\u2603"}])");
-    return t.rows[0][0] == "\xe2\x98\x83";
+    return t.rows.at(0).at(0) == "\xe2\x98\x83";
 }
 
 // --- write escape coverage ---
@@ -148,7 +147,7 @@ auto test_parse_empty_object() -> bool
 {
     // [{}] — exercises the early-return for empty objects in parse_object_pairs.
     const auto t = json::parse("[{}]");
-    return t.headers.empty() && t.rows.size() == 1 && t.rows[0].empty();
+    return t.headers.empty() && t.rows.size() == 1 && t.rows.at(0).empty();
 }
 
 // --- parse rejection coverage ---
@@ -188,7 +187,7 @@ auto test_rejects_isolated_low_surrogate() -> bool
 
 auto test_rejects_unterminated_escape() -> bool
 {
-    return expect::expect_throws([] { (void)json::parse("[{\"a\":\"\\"); });
+    return expect::expect_throws([] { (void)json::parse(R"([{"a":"\)"); });
 }
 
 auto test_rejects_invalid_escape_char() -> bool
@@ -281,4 +280,3 @@ auto main() -> int
     }
     return suite.finish();
 }
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

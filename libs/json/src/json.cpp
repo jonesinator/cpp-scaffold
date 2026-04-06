@@ -4,7 +4,6 @@
  * @brief Implementation of the json library.
  */
 
-// NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,misc-non-private-member-variables-in-classes)
 #include "json/json.hpp"
 
 #include <cstddef>
@@ -89,37 +88,56 @@ void encode_utf8(std::uint32_t cp, std::string& out)
 }
 
 /// Parser state (value type; members are part of the parsing cursor).
-struct Parser
+class Parser
 {
-    std::string_view src;
-    std::size_t pos = 0;
+  public:
+    explicit Parser(std::string_view text) : src_(text) {}
+
+    /// Advance past the current character (for top-level comma/bracket skipping).
+    void advance()
+    {
+        ++pos_;
+    }
+
+    /// Current byte offset into the source (for error messages).
+    [[nodiscard]] auto offset() const -> std::size_t
+    {
+        return pos_;
+    }
+
+    /// Whether the entire input has been consumed.
+    [[nodiscard]] auto at_end() -> bool
+    {
+        skip_ws();
+        return pos_ >= src_.size();
+    }
 
     [[noreturn]] void fail(std::string_view msg) const
     {
-        throw std::runtime_error(std::format("json: {} at offset {}", msg, pos));
+        throw std::runtime_error(std::format("json: {} at offset {}", msg, pos_));
     }
 
     void skip_ws()
     {
-        while (pos < src.size())
+        while (pos_ < src_.size())
         {
-            const char c = src[pos];
+            const char c = src_.at(pos_);
             if (c != ' ' && c != '\t' && c != '\n' && c != '\r')
             {
                 break;
             }
-            ++pos;
+            ++pos_;
         }
     }
 
     auto peek() -> char
     {
         skip_ws();
-        if (pos >= src.size())
+        if (pos_ >= src_.size())
         {
             fail("unexpected end of input");
         }
-        return src[pos];
+        return src_.at(pos_);
     }
 
     void expect(char c)
@@ -129,7 +147,7 @@ struct Parser
         {
             fail(std::format("expected '{}' but got '{}'", c, got));
         }
-        ++pos;
+        ++pos_;
     }
 
     [[nodiscard]] auto hex_value(char c) const -> std::uint32_t
@@ -151,15 +169,15 @@ struct Parser
 
     auto parse_hex4() -> std::uint32_t
     {
-        if (pos + hex_digits_in_escape > src.size())
+        if (pos_ + hex_digits_in_escape > src_.size())
         {
             fail("truncated \\u escape");
         }
         std::uint32_t result = 0;
         for (int i = 0; i < hex_digits_in_escape; ++i)
         {
-            result = (result * hex_base) + hex_value(src[pos]);
-            ++pos;
+            result = (result * hex_base) + hex_value(src_.at(pos_));
+            ++pos_;
         }
         return result;
     }
@@ -169,11 +187,11 @@ struct Parser
         std::uint32_t cp = parse_hex4();
         if (cp >= surrogate_high_min && cp <= surrogate_high_max)
         {
-            if (pos + 1 >= src.size() || src[pos] != '\\' || src[pos + 1] != 'u')
+            if (pos_ + 1 >= src_.size() || src_.at(pos_) != '\\' || src_.at(pos_ + 1) != 'u')
             {
                 fail("unpaired high surrogate in \\u escape");
             }
-            pos += 2;
+            pos_ += 2;
             const std::uint32_t low = parse_hex4();
             if (low < surrogate_low_min || low > surrogate_low_max)
             {
@@ -190,12 +208,12 @@ struct Parser
 
     void parse_escape(std::string& out)
     {
-        if (pos >= src.size())
+        if (pos_ >= src_.size())
         {
             fail("unterminated escape sequence");
         }
-        const char c = src[pos];
-        ++pos;
+        const char c = src_.at(pos_);
+        ++pos_;
         switch (c)
         {
         case '"':
@@ -234,17 +252,17 @@ struct Parser
     {
         expect('"');
         std::string out;
-        while (pos < src.size())
+        while (pos_ < src_.size())
         {
-            const char c = src[pos];
+            const char c = src_.at(pos_);
             if (c == '"')
             {
-                ++pos;
+                ++pos_;
                 return out;
             }
             if (c == '\\')
             {
-                ++pos;
+                ++pos_;
                 parse_escape(out);
             }
             else if (static_cast<unsigned char>(c) < control_char_limit)
@@ -254,7 +272,7 @@ struct Parser
             else
             {
                 out.push_back(c);
-                ++pos;
+                ++pos_;
             }
         }
         fail("unterminated string");
@@ -268,7 +286,7 @@ struct Parser
         std::unordered_set<std::string> seen;
         if (peek() == '}')
         {
-            ++pos;
+            ++pos_;
             return pairs;
         }
         while (true)
@@ -284,17 +302,21 @@ struct Parser
             const char next = peek();
             if (next == ',')
             {
-                ++pos;
+                ++pos_;
                 continue;
             }
             if (next == '}')
             {
-                ++pos;
+                ++pos_;
                 return pairs;
             }
             fail(std::format("expected ',' or '}}' but got '{}'", next));
         }
     }
+
+  private:
+    std::string_view src_;
+    std::size_t pos_ = 0;
 };
 
 /**
@@ -321,7 +343,7 @@ void row_from_object(const std::vector<std::pair<std::string, std::string>>& pai
         {
             throw std::runtime_error(std::format("json: object {} has unexpected key '{}'", object_index, key));
         }
-        row[it->second] = value;
+        row.at(it->second) = value;
     }
 }
 
@@ -375,9 +397,9 @@ void escape_string(std::string& out, std::string_view s)
 
 } // namespace
 
-auto parse(std::string_view text) -> core::Table // NOLINT(misc-use-internal-linkage)
+auto parse(std::string_view text) -> core::Table
 {
-    Parser p{.src = text};
+    Parser p(text);
     p.expect('[');
     if (p.peek() == ']')
     {
@@ -408,26 +430,25 @@ auto parse(std::string_view text) -> core::Table // NOLINT(misc-use-internal-lin
         const char next = p.peek();
         if (next == ',')
         {
-            ++p.pos;
+            p.advance();
             continue;
         }
         if (next == ']')
         {
-            ++p.pos;
+            p.advance();
             break;
         }
-        throw std::runtime_error(std::format("json: expected ',' or ']' but got '{}' at offset {}", next, p.pos));
+        throw std::runtime_error(std::format("json: expected ',' or ']' but got '{}' at offset {}", next, p.offset()));
     }
 
-    p.skip_ws();
-    if (p.pos != p.src.size())
+    if (!p.at_end())
     {
-        throw std::runtime_error(std::format("json: trailing content at offset {}", p.pos));
+        throw std::runtime_error(std::format("json: trailing content at offset {}", p.offset()));
     }
     return table;
 }
 
-auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-linkage)
+auto write(const core::Table& table) -> std::string
 {
     std::string out;
     out.push_back('[');
@@ -437,9 +458,9 @@ auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-
         for (std::size_t c = 0; c < table.headers.size(); ++c)
         {
             out.append(c == 0 ? "\n    " : ",\n    ");
-            escape_string(out, table.headers[c]);
+            escape_string(out, table.headers.at(c));
             out.append(": ");
-            escape_string(out, table.rows[r][c]);
+            escape_string(out, table.rows.at(r).at(c));
         }
         out.append("\n  }");
     }
@@ -448,4 +469,3 @@ auto write(const core::Table& table) -> std::string // NOLINT(misc-use-internal-
 }
 
 } // namespace json
-// NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,misc-non-private-member-variables-in-classes)
