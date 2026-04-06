@@ -37,3 +37,8 @@ CheckOptions:
     value: lower_case
   - key: readability-identifier-naming.PrivateMemberSuffix
     value: _
+  # clang-tidy 19 (Debian trixie) can't map std::println to <print> or
+  # SIGPIPE to <csignal>. Ignore these headers so the check passes across
+  # clang-tidy versions without false positives.
+  - key: misc-include-cleaner.IgnoreHeaders
+    value: "print;csignal;signal.h"

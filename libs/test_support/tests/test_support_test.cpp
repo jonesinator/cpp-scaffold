@@ -52,7 +52,8 @@ auto test_drain_reads_pipe_content() -> bool
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
     const std::string_view msg = "hello drain";
-    (void)::write(fds.at(1), msg.data(), msg.size());
+    auto bytes = ::write(fds.at(1), msg.data(), msg.size());
+    expect::fail_test_when(bytes < 0, "write() failed");
     ::close(fds.at(1));
     auto result = subprocess::drain(fds.at(0));
     ::close(fds.at(0));
@@ -78,7 +79,8 @@ auto test_drain_reads_large_payload() -> bool
     // Write from a background-ish pattern: write then close.
     // For a ~12KB payload, pipe buffer (64KB on Linux) accommodates it in one
     // write without blocking.
-    (void)::write(fds.at(1), big.data(), big.size());
+    auto bytes = ::write(fds.at(1), big.data(), big.size());
+    expect::fail_test_when(bytes < 0, "write() failed");
     ::close(fds.at(1));
     auto result = subprocess::drain(fds.at(0));
     ::close(fds.at(0));
@@ -106,11 +108,9 @@ auto test_write_all_broken_pipe_returns_early() -> bool
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
     ::close(fds.at(0));
-    // SIGPIPE is from <csignal> which wraps <signal.h>; misc-include-cleaner doesn't recognize
-    // the POSIX macro through the C++ wrapper, and <signal.h> triggers modernize-deprecated-headers.
-    auto* prev = std::signal(SIGPIPE, SIG_IGN); // NOLINT(misc-include-cleaner)
+    auto* prev = std::signal(SIGPIPE, SIG_IGN);
     subprocess::write_all(fds.at(1), "data that cannot be delivered");
-    (void)std::signal(SIGPIPE, prev); // NOLINT(misc-include-cleaner)
+    (void)std::signal(SIGPIPE, prev);
     ::close(fds.at(1));
     return true; // survival = success (no infinite loop, no crash)
 }
