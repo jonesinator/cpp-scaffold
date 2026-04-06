@@ -52,9 +52,11 @@ auto main() -> int
         suite.check(test_json_round_trip_via_csv(), "json_round_trip_via_csv");
         return suite.finish();
     }
+    // LCOV_EXCL_START
     catch (const std::exception& ex)
     {
         std::cerr << "FATAL: " << ex.what() << "\n";
         return EXIT_FAILURE;
     }
+    // LCOV_EXCL_STOP
 }

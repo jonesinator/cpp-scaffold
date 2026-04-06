@@ -80,9 +80,9 @@ class OwnedCStrVec
 {
   public:
     /// Return the raw pointer array suitable for execv/execve.
-    auto data() -> char**
+    auto data() -> char** // LCOV_EXCL_LINE
     {
-        return ptrs_.data();
+        return ptrs_.data(); // LCOV_EXCL_LINE
     }
 
     /// Number of entries (excluding the null terminator).

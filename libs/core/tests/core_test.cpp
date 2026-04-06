@@ -31,9 +31,11 @@ auto main() -> int
         suite.check(capture.str() == "hello\n", "println/appends_newline");
         return suite.finish();
     }
+    // LCOV_EXCL_START
     catch (const std::exception& ex)
     {
         std::cerr << "FATAL: " << ex.what() << "\n";
         return EXIT_FAILURE;
     }
+    // LCOV_EXCL_STOP
 }

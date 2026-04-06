@@ -59,9 +59,11 @@ Ada,"London
 
         return suite.finish();
     }
+    // LCOV_EXCL_START
     catch (const std::exception& ex)
     {
         std::cerr << "FATAL: " << ex.what() << "\n";
         return EXIT_FAILURE;
     }
+    // LCOV_EXCL_STOP
 }

@@ -125,6 +125,7 @@ auto main() -> int
         }
         return suite.finish();
     }
+    // LCOV_EXCL_START
     catch (const std::exception& ex)
     {
         std::cerr << "FATAL: " << ex.what() << "\n";
@@ -135,4 +136,5 @@ auto main() -> int
         std::cerr << "FATAL: unknown exception\n";
         return EXIT_FAILURE;
     }
+    // LCOV_EXCL_STOP
 }
