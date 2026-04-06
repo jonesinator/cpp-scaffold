@@ -9,5 +9,8 @@ AllowShortLoopsOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
 PointerAlignment: Left
 ReferenceAlignment: Left
+AttributeMacros:
+  - TEST_NO_COVERAGE
+  - SUBPROCESS_NO_COVERAGE
 SortIncludes: CaseSensitive
 IncludeBlocks: Regroup

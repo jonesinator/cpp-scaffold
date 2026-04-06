@@ -20,6 +20,23 @@
 #include <string>
 #include <string_view>
 
+// Unified coverage-exclusion macros. LCOV_EXCL handles GCC gcov (lcov);
+// #pragma clang coverage handles Clang source-based coverage (llvm-cov).
+// GCC doesn't recognize the clang pragma (-Werror=unknown-pragmas), so we
+// only emit it under Clang.
+// Clang source-based coverage instruments at the AST level, so we can use
+// no_profile_instrument_function to exclude functions from llvm-cov reports.
+// GCC's gcov coverage uses LCOV_EXCL markers instead (the attribute is a
+// no-op under GCC). Apply TEST_NO_COVERAGE to test main() functions whose
+// try/catch wrappers would otherwise show as uncovered.
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#ifdef __clang__
+#define TEST_NO_COVERAGE __attribute__((no_profile_instrument_function))
+#else
+#define TEST_NO_COVERAGE
+#endif
+// NOLINTEND(cppcoreguidelines-macro-usage)
+
 namespace expect
 {
 

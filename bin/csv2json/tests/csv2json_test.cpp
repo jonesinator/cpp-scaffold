@@ -17,7 +17,7 @@
 #error "CSV2JSON_EXECUTABLE must be defined"
 #endif
 
-auto main() -> int
+TEST_NO_COVERAGE auto main() -> int
 {
     try
     {

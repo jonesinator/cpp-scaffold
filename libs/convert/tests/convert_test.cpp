@@ -43,7 +43,7 @@ auto test_json_round_trip_via_csv() -> bool
 
 } // namespace
 
-auto main() -> int
+TEST_NO_COVERAGE auto main() -> int
 {
     try
     {

@@ -80,7 +80,7 @@ class OwnedCStrVec
 {
   public:
     /// Return the raw pointer array suitable for execv/execve.
-    auto data() -> char** // LCOV_EXCL_LINE
+    SUBPROCESS_NO_COVERAGE auto data() -> char** // LCOV_EXCL_LINE
     {
         return ptrs_.data(); // LCOV_EXCL_LINE
     }

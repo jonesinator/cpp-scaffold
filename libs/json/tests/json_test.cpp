@@ -239,7 +239,7 @@ struct TestCase
 
 } // namespace
 
-auto main() -> int
+TEST_NO_COVERAGE auto main() -> int
 {
     try
     {

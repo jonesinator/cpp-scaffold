@@ -287,7 +287,7 @@ auto test_expect_throws_calls_fail_test_on_no_throw() -> bool
 
 } // namespace
 
-auto main() -> int
+TEST_NO_COVERAGE auto main() -> int
 {
     try
     {

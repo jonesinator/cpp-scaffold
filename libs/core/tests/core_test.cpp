@@ -15,7 +15,7 @@
 /**
  * @brief Verify that core::println() writes the message followed by a newline.
  */
-auto main() -> int
+TEST_NO_COVERAGE auto main() -> int
 {
     try
     {
