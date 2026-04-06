@@ -8,7 +8,7 @@ opener := if os() == "macos" { "open" } else if os() == "windows" { "start" } el
 default:
     @just --list
     @echo ""
-    @echo "Profiles: debug (default), release, coverage, asan, tsan"
+    @echo "Profiles: debug (default), release, coverage, clang-coverage, asan, tsan"
     @echo "Example:  just test asan"
 
 # Configure a build (debug, release, coverage, asan, tsan)
@@ -36,6 +36,20 @@ coverage: (test "coverage")
 coverage-report: (test "coverage")
     cmake --build build/coverage --target coverage-report
     @echo "Report: build/coverage/coverage.info"
+
+# Run tests and generate Clang source-based HTML coverage report
+clang-coverage: (test "clang-coverage")
+    cmake --build build/clang-coverage --target clang-coverage-html
+    @echo "Report: build/clang-coverage/coverage/index.html"
+
+# Run tests and generate Clang source-based coverage summary
+clang-coverage-report: (test "clang-coverage")
+    cmake --build build/clang-coverage --target clang-coverage-report
+    @echo "Report: build/clang-coverage/coverage.lcov"
+
+# Open the Clang coverage HTML report in a browser
+open-clang-coverage: clang-coverage
+    {{opener}} build/clang-coverage/coverage/index.html
 
 # Format all source files
 format:

@@ -105,15 +105,22 @@ include(cmake/Version.cmake)
 enable_testing()
 
 # ---------- Libraries ----------
+# test_support comes first because scaffold_add_library links every <name>_test
+# against it for the expect::Suite helper (see cmake/ScaffoldLibrary.cmake).
+add_subdirectory(libs/test_support)
 add_subdirectory(libs/core)
 add_subdirectory(libs/csv)
 add_subdirectory(libs/json)
 add_subdirectory(libs/convert)
-add_subdirectory(libs/test_support)
 
 # ---------- Binaries ----------
 add_subdirectory(bin/csv2json)
 add_subdirectory(bin/json2csv)
+
+# ---------- Clang source-based coverage targets ----------
+# Must come after all add_subdirectory() calls so SCAFFOLD_TEST_EXECUTABLES
+# is fully populated and test targets exist for generator expressions.
+scaffold_add_clang_coverage_targets()
 
 # ---------- Install / Packaging ----------
 include(cmake/Install.cmake)

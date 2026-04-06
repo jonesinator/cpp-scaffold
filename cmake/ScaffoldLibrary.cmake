@@ -93,7 +93,7 @@ function(scaffold_add_library)
 
     # ---------- Tests ----------
     add_executable(${ARG_NAME}_test tests/${ARG_NAME}_test.cpp)
-    target_link_libraries(${ARG_NAME}_test PRIVATE ${ARG_NAME})
+    target_link_libraries(${ARG_NAME}_test PRIVATE ${ARG_NAME} test_support)
     add_test(NAME ${ARG_NAME}_test COMMAND ${ARG_NAME}_test)
     set_tests_properties(${ARG_NAME}_test PROPERTIES TIMEOUT ${ARG_TIMEOUT})
 
@@ -103,4 +103,5 @@ function(scaffold_add_library)
     # hand-maintaining a parallel list of libs + their dependency graph.
     set_property(GLOBAL APPEND PROPERTY SCAFFOLD_LIBRARIES ${ARG_NAME})
     set_property(GLOBAL PROPERTY SCAFFOLD_LIBRARY_DEPS_${ARG_NAME} "${ARG_DEPENDS}")
+    set_property(GLOBAL APPEND PROPERTY SCAFFOLD_TEST_EXECUTABLES ${ARG_NAME}_test)
 endfunction()

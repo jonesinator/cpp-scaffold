@@ -66,6 +66,12 @@
             "inherits": "debug",
             "displayName": "Clang Debug (portability canary)",
             "cacheVariables": { "CMAKE_CXX_COMPILER": "clang++" }
+        },
+        {
+            "name": "clang-coverage",
+            "inherits": "clang-debug",
+            "displayName": "Clang Coverage (source-based)",
+            "cacheVariables": { "ENABLE_COVERAGE": "ON" }
         }
     ],
     "buildPresets": [
@@ -75,7 +81,8 @@
         { "name": "asan",        "configurePreset": "asan",        "jobs": 0 },
         { "name": "tsan",        "configurePreset": "tsan",        "jobs": 0 },
         { "name": "static",      "configurePreset": "static",      "jobs": 0 },
-        { "name": "clang-debug", "configurePreset": "clang-debug", "jobs": 0 }
+        { "name": "clang-debug",    "configurePreset": "clang-debug",    "jobs": 0 },
+        { "name": "clang-coverage", "configurePreset": "clang-coverage", "jobs": 0 }
     ],
     "testPresets": [
         { "name": "debug",       "configurePreset": "debug",       "output": { "outputOnFailure": true } },
@@ -84,6 +91,14 @@
         { "name": "asan",        "configurePreset": "asan",        "output": { "outputOnFailure": true } },
         { "name": "tsan",        "configurePreset": "tsan",        "output": { "outputOnFailure": true } },
         { "name": "static",      "configurePreset": "static",      "output": { "outputOnFailure": true } },
-        { "name": "clang-debug", "configurePreset": "clang-debug", "output": { "outputOnFailure": true } }
+        { "name": "clang-debug",    "configurePreset": "clang-debug",    "output": { "outputOnFailure": true } },
+        {
+            "name": "clang-coverage",
+            "configurePreset": "clang-coverage",
+            "output": { "outputOnFailure": true },
+            "environment": {
+                "LLVM_PROFILE_FILE": "${sourceDir}/build/clang-coverage/%p-%m.profraw"
+            }
+        }
     ]
 }

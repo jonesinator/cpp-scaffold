@@ -5,15 +5,13 @@
  */
 
 #include "core/core.hpp"
+#include "test_support/expect.hpp"
 
-#include <cstdlib>
 #include <iostream>
-#include <print>
 #include <sstream>
 
 /**
  * @brief Verify that core::println() writes the message followed by a newline.
- * @return EXIT_SUCCESS on pass, EXIT_FAILURE on fail.
  */
 auto main() -> int
 {
@@ -25,14 +23,7 @@ auto main() -> int
 
     std::cout.rdbuf(original);
 
-    if (capture.str() != "hello\n")
-    {
-        // LCOV_EXCL_START
-        std::cerr << R"(FAIL: expected "hello\n", got ")" << capture.str() << "\"\n";
-        return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
-    }
-
-    std::println("PASS: core::println()");
-    return EXIT_SUCCESS;
+    expect::Suite suite("core");
+    suite.check(capture.str() == "hello\n", "println/appends_newline");
+    return suite.finish();
 }

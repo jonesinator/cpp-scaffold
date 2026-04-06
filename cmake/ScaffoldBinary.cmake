@@ -60,4 +60,5 @@ function(scaffold_add_binary)
     # See scaffold_add_library for rationale.
     set_property(GLOBAL APPEND PROPERTY SCAFFOLD_BINARIES ${ARG_NAME})
     set_property(GLOBAL PROPERTY SCAFFOLD_BINARY_DEPS_${ARG_NAME} "${ARG_DEPENDS}")
+    set_property(GLOBAL APPEND PROPERTY SCAFFOLD_TEST_EXECUTABLES ${ARG_NAME}_test)
 endfunction()

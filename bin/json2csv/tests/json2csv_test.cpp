@@ -4,11 +4,9 @@
  * @brief Integration tests for the json2csv binary.
  */
 
+#include "test_support/expect.hpp"
 #include "test_support/subprocess.hpp"
 
-#include <cstdlib>
-#include <iostream>
-#include <print>
 #include <string>
 
 /// Path to the json2csv binary, injected by CMake.
@@ -16,44 +14,40 @@
 #error "JSON2CSV_EXECUTABLE must be defined"
 #endif
 
-/**
- * @brief Pipe sample JSON into json2csv and verify its CSV output.
- * @return EXIT_SUCCESS on pass, EXIT_FAILURE on fail.
- */
 auto main() -> int
 {
-    const std::string json_in = "[\n"
-                                "  {\n"
-                                "    \"name\": \"Ada\",\n"
-                                "    \"city\": \"London, UK\"\n"
-                                "  },\n"
-                                "  {\n"
-                                "    \"name\": \"Grace\",\n"
-                                "    \"city\": \"New York\"\n"
-                                "  }\n"
-                                "]";
-    const std::string expected = "name,city\n"
-                                 "Ada,\"London, UK\"\n"
-                                 "Grace,New York\n";
+    expect::Suite suite("json2csv");
 
-    const auto result = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, json_in);
-
-    if (result.exit_code != 0)
+    // Happy path.
     {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "FAIL: json2csv exited with code {} (stderr: {})", result.exit_code, result.err);
-        return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
+        const std::string json_in = R"([
+  {
+    "name": "Ada",
+    "city": "London, UK"
+  },
+  {
+    "name": "Grace",
+    "city": "New York"
+  }
+])";
+        const std::string expected = R"(name,city
+Ada,"London, UK"
+Grace,New York
+)";
+        const auto r = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, json_in);
+        suite.check(r.exit_code == 0, "ok/exits_zero");
+        suite.check(r.out == expected, "ok/output_matches");
+        suite.check(r.err.empty(), "ok/stderr_empty");
     }
 
-    if (result.out != expected)
+    // Malformed input: library throws, main catches, binary prints
+    // "json2csv: <message>" to stderr and exits non-zero.
     {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "FAIL: expected:\n{}\ngot:\n{}", expected, result.out);
-        return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
+        const std::string bad_json = "not valid json at all";
+        const auto r = subprocess::run(JSON2CSV_EXECUTABLE, {}, {}, bad_json);
+        suite.check(r.exit_code != 0, "bad_input/exits_nonzero");
+        suite.check(r.err.contains("json2csv:"), "bad_input/stderr_prefixed");
     }
 
-    std::println("PASS: json2csv");
-    return EXIT_SUCCESS;
+    return suite.finish();
 }

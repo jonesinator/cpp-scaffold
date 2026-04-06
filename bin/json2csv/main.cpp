@@ -30,9 +30,7 @@ auto main() -> int
     }
     catch (const std::exception& e)
     {
-        // LCOV_EXCL_START
         std::println(std::cerr, "json2csv: {}", e.what());
         return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
     }
 }

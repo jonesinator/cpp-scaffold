@@ -6,12 +6,9 @@
 
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
 #include "csv/csv.hpp"
+#include "test_support/expect.hpp"
 
 #include <array>
-#include <cstdlib>
-#include <exception>
-#include <iostream>
-#include <print>
 #include <string>
 #include <vector>
 
@@ -68,51 +65,28 @@ auto test_round_trip() -> bool
 {
     // Input is already in the writer's canonical form: empty fields are bare,
     // and quotes are only used where required (containing , or ").
-    const std::string original = "name,city,note\n"
-                                 "Ada,\"London, UK\",pioneer\n"
-                                 "Grace,New York,\n"
-                                 "Linus,Helsinki,\"said \"\"hi\"\"\"\n"
-                                 "Anonymous,,no city\n";
+    const std::string original = R"(name,city,note
+Ada,"London, UK",pioneer
+Grace,New York,
+Linus,Helsinki,"said ""hi"""
+Anonymous,,no city
+)";
     return csv::write(csv::parse(original)) == original;
 }
 
 auto test_malformed_wrong_column_count() -> bool
 {
-    try
-    {
-        (void)csv::parse("a,b\n1,2,3\n");
-        return false;
-    }
-    catch (const std::exception&)
-    {
-        return true;
-    }
+    return expect::expect_throws([] { (void)csv::parse("a,b\n1,2,3\n"); });
 }
 
 auto test_malformed_unterminated_quote() -> bool
 {
-    try
-    {
-        (void)csv::parse("a,b\n\"oops,x\n");
-        return false;
-    }
-    catch (const std::exception&)
-    {
-        return true;
-    }
+    return expect::expect_throws([] { (void)csv::parse("a,b\n\"oops,x\n"); });
 }
 
 auto test_empty_input_throws() -> bool
 {
-    try
-    {
-        (void)csv::parse("");
-        return false;
-    }
-    catch (const std::exception&)
-    {
-        return true;
-    }
+    return expect::expect_throws([] { (void)csv::parse(""); });
 }
 
 struct TestCase
@@ -139,26 +113,11 @@ auto main() -> int
         {.name = "empty_input_throws", .fn = test_empty_input_throws},
     });
 
-    int failures = 0;
+    expect::Suite suite("csv");
     for (const auto& tc : cases)
     {
-        if (!tc.fn())
-        {
-            // LCOV_EXCL_START
-            std::println(std::cerr, "FAIL: {}", tc.name);
-            ++failures;
-            // LCOV_EXCL_STOP
-        }
+        suite.check(tc.fn(), tc.name);
     }
-
-    if (failures != 0)
-    {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "{} csv test(s) failed", failures);
-        return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
-    }
-    std::println("PASS: all csv tests");
-    return EXIT_SUCCESS;
+    return suite.finish();
 }
 // NOLINTEND(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)

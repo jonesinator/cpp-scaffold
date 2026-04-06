@@ -5,10 +5,8 @@
  */
 
 #include "convert/convert.hpp"
+#include "test_support/expect.hpp"
 
-#include <cstdlib>
-#include <iostream>
-#include <print>
 #include <string>
 
 namespace
@@ -16,26 +14,27 @@ namespace
 
 auto test_csv_round_trip_via_json() -> bool
 {
-    const std::string original = "name,city,note\n"
-                                 "Ada,\"London, UK\",pioneer\n"
-                                 "Grace,New York,\n"
-                                 "Linus,Helsinki,\"said \"\"hi\"\"\"\n"
-                                 "Anonymous,,no city\n";
+    const std::string original = R"(name,city,note
+Ada,"London, UK",pioneer
+Grace,New York,
+Linus,Helsinki,"said ""hi"""
+Anonymous,,no city
+)";
     return convert::json_to_csv(convert::csv_to_json(original)) == original;
 }
 
 auto test_json_round_trip_via_csv() -> bool
 {
-    const std::string original = "[\n"
-                                 "  {\n"
-                                 "    \"name\": \"Ada\",\n"
-                                 "    \"city\": \"London, UK\"\n"
-                                 "  },\n"
-                                 "  {\n"
-                                 "    \"name\": \"Linus\",\n"
-                                 "    \"city\": \"Helsinki\"\n"
-                                 "  }\n"
-                                 "]";
+    const std::string original = R"([
+  {
+    "name": "Ada",
+    "city": "London, UK"
+  },
+  {
+    "name": "Linus",
+    "city": "Helsinki"
+  }
+])";
     return convert::csv_to_json(convert::json_to_csv(original)) == original;
 }
 
@@ -43,28 +42,8 @@ auto test_json_round_trip_via_csv() -> bool
 
 auto main() -> int
 {
-    int failures = 0;
-    if (!test_csv_round_trip_via_json())
-    {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "FAIL: csv_round_trip_via_json");
-        ++failures;
-        // LCOV_EXCL_STOP
-    }
-    if (!test_json_round_trip_via_csv())
-    {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "FAIL: json_round_trip_via_csv");
-        ++failures;
-        // LCOV_EXCL_STOP
-    }
-    if (failures != 0)
-    {
-        // LCOV_EXCL_START
-        std::println(std::cerr, "{} convert test(s) failed", failures);
-        return EXIT_FAILURE;
-        // LCOV_EXCL_STOP
-    }
-    std::println("PASS: all convert tests");
-    return EXIT_SUCCESS;
+    expect::Suite suite("convert");
+    suite.check(test_csv_round_trip_via_json(), "csv_round_trip_via_json");
+    suite.check(test_json_round_trip_via_csv(), "json_round_trip_via_csv");
+    return suite.finish();
 }

@@ -91,7 +91,7 @@ jobs:
         run: just lint
 
   clang-build:
-    name: Clang build + test
+    name: Clang build + test + coverage
     runs-on: ubuntu-24.04
     container: debian@sha256:26f98ccd92fd0a44d6928ce8ff8f4921b4d2f535bfa07555ee5d18f61429cf0c  # debian:trixie-slim
     needs: setup
@@ -100,9 +100,18 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Install toolchain
-        run: apt-get update && apt-get install -y --no-install-recommends clang libstdc++-14-dev cmake ninja-build mold ccache just
+        run: apt-get update && apt-get install -y --no-install-recommends clang llvm libstdc++-14-dev cmake ninja-build mold ccache just
       - name: Build + test with clang
         run: just test clang-debug
+      - name: Clang source-based coverage
+        run: just clang-coverage
+      - name: Upload clang coverage
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        with:
+          name: scaffold-clang-coverage
+          path: |
+            build/clang-coverage/coverage
+            build/clang-coverage/coverage.lcov
 
   docs:
     name: Docs
