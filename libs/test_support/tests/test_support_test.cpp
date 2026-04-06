@@ -48,7 +48,7 @@ auto test_drain_reads_pipe_content() -> bool
     std::array<int, 2> fds{};
     expect::fail_test_when(::pipe(fds.data()) != 0, "pipe() failed");
     const std::string_view msg = "hello drain";
-    ::write(fds.at(1), msg.data(), msg.size());
+    (void)::write(fds.at(1), msg.data(), msg.size());
     ::close(fds.at(1));
     auto result = subprocess::drain(fds.at(0));
     ::close(fds.at(0));
@@ -74,7 +74,7 @@ auto test_drain_reads_large_payload() -> bool
     // Write from a background-ish pattern: write then close.
     // For a ~12KB payload, pipe buffer (64KB on Linux) accommodates it in one
     // write without blocking.
-    ::write(fds.at(1), big.data(), big.size());
+    (void)::write(fds.at(1), big.data(), big.size());
     ::close(fds.at(1));
     auto result = subprocess::drain(fds.at(0));
     ::close(fds.at(0));
