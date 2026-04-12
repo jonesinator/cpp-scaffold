@@ -35,7 +35,7 @@ jobs:
             echo "SOURCE_DATE_EPOCH: ${{ steps.sde.outputs.value }}"
           } > runner-info.txt
       - name: Upload source SBOM
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-source-sbom
           path: |
@@ -106,7 +106,7 @@ jobs:
       - name: Clang source-based coverage
         run: just clang-coverage
       - name: Upload clang coverage
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-clang-coverage
           path: |
@@ -132,7 +132,7 @@ jobs:
       - name: Run docs
         run: just docs
       - name: Upload docs
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-docs
           path: |
@@ -153,7 +153,7 @@ jobs:
       - name: Run deps
         run: just deps
       - name: Upload deps graph
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-deps
           path: build/deps.svg
@@ -172,7 +172,7 @@ jobs:
       - name: Run coverage
         run: just coverage
       - name: Upload coverage
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-coverage
           path: |
@@ -215,14 +215,14 @@ jobs:
             static-out/csv2json-x86_64
             static-out/json2csv-x86_64
       - name: Upload csv2json
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-csv2json-static-x86_64
           path: |
             static-out/csv2json-x86_64
             static-out/csv2json-x86_64.spdx.json
       - name: Upload json2csv
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-json2csv-static-x86_64
           path: |
@@ -440,41 +440,41 @@ jobs:
             ./*.pkg.tar.zst
 
       - name: Upload SBOMs
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-sboms
           path: sboms/
 
       - name: Upload TGZ
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-tgz
           path: build/${{ matrix.profile }}/scaffold-*.tar.gz
 
       - name: Upload DEB
         if: matrix.distro == 'trixie'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-deb
           path: build/${{ matrix.profile }}/scaffold-*.deb
 
       - name: Upload RPM
         if: matrix.distro == 'fedora'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-rpm
           path: build/${{ matrix.profile }}/scaffold-*.rpm
 
       - name: Upload pkg.tar.zst
         if: matrix.use_makepkg == true
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-pkg
           path: "*.pkg.tar.zst"
 
       - name: Upload APK
         if: matrix.use_abuild == true
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-${{ matrix.distro }}-${{ matrix.profile }}-apk
           path: "*.apk"
@@ -655,7 +655,7 @@ jobs:
 
       - name: Save reprotest stdout (on failure)
         if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: reproducibility-diff-${{ matrix.distro }}
           path: /tmp/reprotest-log.txt
@@ -701,7 +701,7 @@ jobs:
           exit $fail
       - name: Upload CVE reports
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: scaffold-cve-reports
           path: cve-reports/
